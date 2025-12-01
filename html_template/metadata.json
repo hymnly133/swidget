@@ -1,0 +1,28 @@
+{
+	"acceptsMouseEvents": true,
+	"author": "Sionspota",
+	"authorEmail": "sionspota@163.com",
+	"authorWebsite": "sapphire.icu",
+	"customFields": {},
+	"defaultGridSize": {
+		"cols": 2,
+		"rows": 3
+	},
+	"description": "",
+	"displayName": "HTML模板",
+	"functions": [],
+	"manualFileName": "",
+	"minimumAppVersion": "",
+	"name": "html_template",
+	"permissions": [],
+	"previewImageFileName": "",
+	"supportTypes": {
+		"supportsFile": false,
+		"supportsImage": false,
+		"supportsVideo": false
+	},
+	"tags": [],
+	"version": "1.0.0",
+	"widgetFileName": "html_template.html",
+	"widgetType": "Html"
+}

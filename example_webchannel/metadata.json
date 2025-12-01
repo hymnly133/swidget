@@ -1,0 +1,33 @@
+{
+    "acceptsMouseEvents": true,
+    "author": "",
+    "authorEmail": "",
+    "authorWebsite": "",
+    "customFields": {
+    },
+    "defaultGridSize": {
+        "cols": 1,
+        "rows": 1
+    },
+    "description": "",
+    "displayName": "example_webchannel",
+    "functions": [
+        "SMTC"
+    ],
+    "manualFileName": "",
+    "minimumAppVersion": "",
+    "name": "example_webchannel",
+    "permissions": [
+    ],
+    "previewImageFileName": "",
+    "supportTypes": {
+        "supportsFile": false,
+        "supportsImage": false,
+        "supportsVideo": false
+    },
+    "tags": [
+    ],
+    "version": "1.0.0",
+    "widgetFileName": "example_webchannel.html",
+    "widgetType": "Html"
+}

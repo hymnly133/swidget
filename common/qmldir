@@ -1,0 +1,4 @@
+module SWidgets
+SWidget 1.0 ./SWidget.qml
+SWebWidget 1.0 ./SWebWidget.qml
+

@@ -1,0 +1,32 @@
+{
+    "acceptsMouseEvents": true,
+    "author": "",
+    "authorEmail": "",
+    "authorWebsite": "",
+    "customFields": {
+    },
+    "defaultGridSize": {
+        "cols": 2,
+        "rows": 3
+    },
+    "description": "",
+    "displayName": "MP4播放器",
+    "functions": [
+    ],
+    "manualFileName": "2.pdf",
+    "minimumAppVersion": "",
+    "name": "hymnly_mp4_player",
+    "permissions": [
+    ],
+    "previewImageFileName": "",
+    "supportTypes": {
+        "supportsFile": false,
+        "supportsImage": false,
+        "supportsVideo": false
+    },
+    "tags": [
+    ],
+    "version": "1.0.0",
+    "widgetFileName": "example_mp4_widget.qml",
+    "widgetType": "Qml"
+}

@@ -1,0 +1,33 @@
+{
+    "acceptsMouseEvents": true,
+    "author": "",
+    "authorEmail": "",
+    "authorWebsite": "",
+    "customFields": {
+    },
+    "defaultGridSize": {
+        "cols": 1,
+        "rows": 1
+    },
+    "description": "",
+    "displayName": "bcsMusicCard_v2",
+    "functions": [
+        "SMTC"
+    ],
+    "manualFileName": "",
+    "minimumAppVersion": "",
+    "name": "bcsMusicCard_v2",
+    "permissions": [
+    ],
+    "previewImageFileName": "",
+    "supportTypes": {
+        "supportsFile": false,
+        "supportsImage": false,
+        "supportsVideo": false
+    },
+    "tags": [
+    ],
+    "version": "1.0.0",
+    "widgetFileName": "bcsMusicCard_v2.qml",
+    "widgetType": "Qml"
+}
