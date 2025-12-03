@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Sapphire WebChannel 示例</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+				background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+				color: #333;
+				padding: 20px;
+				min-height: 100vh;
+			}
+
+			.container {
+				max-width: 1200px;
+				margin: 0 auto;
+				background: rgba(255, 255, 255, 0.95);
+				border-radius: 12px;
+				padding: 30px;
+				box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+			}
+
+			h1 {
+				color: #667eea;
+				margin-bottom: 10px;
+				font-size: 28px;
+			}
+
+			.subtitle {
+				color: #666;
+				margin-bottom: 30px;
+				font-size: 14px;
+			}
+
+			.section {
+				margin-bottom: 30px;
+				padding: 20px;
+				background: #f8f9fa;
+				border-radius: 8px;
+				border-left: 4px solid #667eea;
+			}
+
+			.section h2 {
+				color: #333;
+				margin-bottom: 15px;
+				font-size: 20px;
+			}
+
+			.info-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+				gap: 15px;
+				margin-bottom: 15px;
+			}
+
+			.info-item {
+				background: white;
+				padding: 12px;
+				border-radius: 6px;
+				box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+			}
+
+			.info-label {
+				font-weight: bold;
+				color: #667eea;
+				font-size: 12px;
+				margin-bottom: 5px;
+			}
+
+			.info-value {
+				color: #333;
+				font-size: 14px;
+				word-break: break-all;
+			}
+
+			.button-group {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 10px;
+				margin-top: 15px;
+			}
+
+			button {
+				padding: 10px 20px;
+				background: #667eea;
+				color: white;
+				border: none;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 14px;
+				transition: all 0.3s;
+			}
+
+			button:hover {
+				background: #5568d3;
+				transform: translateY(-2px);
+				box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+			}
+
+			button:active {
+				transform: translateY(0);
+			}
+
+			button:disabled {
+				background: #ccc;
+				cursor: not-allowed;
+				transform: none;
+			}
+
+			.status {
+				padding: 10px;
+				border-radius: 6px;
+				margin-top: 10px;
+				font-size: 13px;
+			}
+
+			.status.success {
+				background: #d4edda;
+				color: #155724;
+				border: 1px solid #c3e6cb;
+			}
+
+			.status.error {
+				background: #f8d7da;
+				color: #721c24;
+				border: 1px solid #f5c6cb;
+			}
+
+			.status.info {
+				background: #d1ecf1;
+				color: #0c5460;
+				border: 1px solid #bee5eb;
+			}
+
+			.log-area {
+				background: #1e1e1e;
+				color: #d4d4d4;
+				padding: 15px;
+				border-radius: 6px;
+				font-family: "Consolas", "Monaco", monospace;
+				font-size: 12px;
+				max-height: 300px;
+				overflow-y: auto;
+				margin-top: 15px;
+			}
+
+			.log-entry {
+				margin-bottom: 5px;
+				padding: 3px 0;
+			}
+
+			.log-entry.info {
+				color: #4ec9b0;
+			}
+
+			.log-entry.error {
+				color: #f48771;
+			}
+
+			.log-entry.success {
+				color: #89d185;
+			}
+
+			.smtc-controls {
+				display: flex;
+				gap: 10px;
+				flex-wrap: wrap;
+			}
+
+			.smtc-info {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+				gap: 10px;
+				margin-top: 15px;
+			}
+
+			.album-art {
+				width: 150px;
+				height: 150px;
+				border-radius: 8px;
+				object-fit: cover;
+				background: #ddd;
+				display: block;
+				margin: 10px auto;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<h1>🎵 Sapphire WebChannel 交互示例</h1>
+			<p class="subtitle">展示如何通过WebChannel与Qt C++端进行双向通信</p>
+
+			<!-- WebChannel连接状态 -->
+			<div class="section">
+				<h2>📡 WebChannel 连接状态</h2>
+				<div id="connectionStatus" class="status info">
+					正在初始化WebChannel...
+				</div>
+				<div class="button-group">
+					<button onclick="testConnection()">测试连接</button>
+					<button onclick="getCurrentTime()">获取当前时间</button>
+					<button onclick="getThemeColor()">获取主题色</button>
+				</div>
+			</div>
+
+			<!-- Unit基础信息 -->
+			<div class="section">
+				<h2>📦 Unit 基础信息</h2>
+				<div class="info-grid" id="unitInfoGrid">
+					<div class="info-item">
+						<div class="info-label">小组件名称</div>
+						<div class="info-value" id="widgetName">-</div>
+					</div>
+					<div class="info-item">
+						<div class="info-label">小组件类型</div>
+						<div class="info-value" id="widgetType">-</div>
+					</div>
+					<div class="info-item">
+						<div class="info-label">焦点状态</div>
+						<div class="info-value" id="isFocus">-</div>
+					</div>
+					<div class="info-item">
+						<div class="info-label">选中状态</div>
+						<div class="info-value" id="isSelect">-</div>
+					</div>
+					<div class="info-item">
+						<div class="info-label">大小 (X × Y)</div>
+						<div class="info-value" id="size">-</div>
+					</div>
+					<div class="info-item">
+						<div class="info-label">可见性</div>
+						<div class="info-value" id="isVisible">-</div>
+					</div>
+				</div>
+				<div class="button-group">
+					<button onclick="loadUnitInfo()">刷新Unit信息</button>
+					<button onclick="getWidgetProperty('isFocus')">获取焦点属性</button>
+					<button onclick="getWidgetProperty('sizeX')">获取宽度</button>
+				</div>
+			</div>
+
+			<!-- SMTC媒体信息 -->
+			<div class="section">
+				<h2>🎵 SMTC 媒体信息</h2>
+				<div id="smtcStatus" class="status info">SMTC功能状态：检查中...</div>
+				<!-- 专辑封面 -->
+				<div style="text-align: center; margin-bottom: 15px">
+					<img
+						id="albumArtImage"
+						class="album-art"
+						src=""
+						alt="专辑封面"
+						style="display: none"
+					/>
+				</div>
+				<div class="smtc-info" id="smtcMediaInfo">
+					<div class="info-item">
+						<div class="info-label">媒体标题</div>
+						<div class="info-value" id="mediaTitle">-</div>
+					</div>
+					<div class="info-item">
+						<div class="info-label">艺术家</div>
+						<div class="info-value" id="mediaArtist">-</div>
+					</div>
+					<div class="info-item">
+						<div class="info-label">专辑</div>
+						<div class="info-value" id="mediaAlbum">-</div>
+					</div>
+					<div class="info-item">
+						<div class="info-label">应用名称</div>
+						<div class="info-value" id="appName">-</div>
+					</div>
+					<div class="info-item">
+						<div class="info-label">播放状态</div>
+						<div class="info-value" id="playbackStatus">-</div>
+					</div>
+					<div class="info-item">
+						<div class="info-label">播放进度</div>
+						<div class="info-value" id="playbackProgress">-</div>
+					</div>
+				</div>
+				<div class="button-group">
+					<button onclick="loadSMTCMediaInfo()">刷新媒体信息</button>
+					<button onclick="loadSMTCPlaybackStatus()">刷新播放状态</button>
+					<button onclick="loadSMTCControlCapabilities()">刷新控制能力</button>
+				</div>
+			</div>
+
+			<!-- SMTC控制 -->
+			<div class="section">
+				<h2>🎮 SMTC 媒体控制</h2>
+				<div id="controlStatus" class="status info">等待加载控制能力...</div>
+				<div class="smtc-controls" id="smtcControls">
+					<button onclick="controlSMTC('play')" id="btnPlay" disabled>
+						播放
+					</button>
+					<button onclick="controlSMTC('pause')" id="btnPause" disabled>
+						暂停
+					</button>
+					<button onclick="controlSMTC('stop')" id="btnStop" disabled>
+						停止
+					</button>
+					<button onclick="controlSMTC('next')" id="btnNext" disabled>
+						下一首
+					</button>
+					<button onclick="controlSMTC('previous')" id="btnPrevious" disabled>
+						上一首
+					</button>
+				</div>
+			</div>
+
+			<!-- 日志区域 -->
+			<div class="section">
+				<h2>📋 操作日志</h2>
+				<div class="button-group">
+					<button onclick="clearLog()">清空日志</button>
+					<button onclick="testSignalConnection()">测试信号连接</button>
+				</div>
+				<div class="log-area" id="logArea"></div>
+			</div>
+		</div>
+
+		<!-- 加载qwebchannel.js -->
+		<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+		<script>
+			// WebChannel和bridge对象
+			let channel = null;
+			let bridge = null;
+
+			// 日志函数
+			function log(message, type = "info") {
+				const logArea = document.getElementById("logArea");
+				const entry = document.createElement("div");
+				entry.className = `log-entry ${type}`;
+				entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+				logArea.appendChild(entry);
+				logArea.scrollTop = logArea.scrollHeight;
+				console.log(message);
+			}
+
+			function clearLog() {
+				document.getElementById("logArea").innerHTML = "";
+			}
+
+			// 初始化WebChannel
+			function initWebChannel() {
+				log("正在初始化WebChannel...", "info");
+
+				// 创建transport对象（对于WebEngineView，使用qt.webChannelTransport）
+				if (typeof qt === "undefined" || !qt.webChannelTransport) {
+					log("错误: qt.webChannelTransport 不可用", "error");
+					document.getElementById("connectionStatus").textContent =
+						"❌ WebChannel初始化失败: qt.webChannelTransport不可用";
+					document.getElementById("connectionStatus").className =
+						"status error";
+					return;
+				}
+
+				// 创建QWebChannel实例
+				new QWebChannel(qt.webChannelTransport, function (ch) {
+					channel = ch;
+					bridge = channel.objects.bridge;
+
+					if (!bridge) {
+						log("错误: bridge对象未找到", "error");
+						document.getElementById("connectionStatus").textContent =
+							"❌ Bridge对象未找到";
+						document.getElementById("connectionStatus").className =
+							"status error";
+						return;
+					}
+
+					log("✅ WebChannel初始化成功，bridge对象可用", "success");
+					document.getElementById("connectionStatus").textContent =
+						"✅ WebChannel已连接，bridge对象可用（响应式属性已启用）";
+					document.getElementById("connectionStatus").className =
+						"status success";
+
+					// 连接信号
+					if (bridge.messageReceived) {
+						bridge.messageReceived.connect(function (message) {
+							log(`收到C++消息: ${message}`, "info");
+						});
+					}
+
+					if (bridge.functionCalled) {
+						bridge.functionCalled.connect(function (functionName, parameters) {
+							log(`C++函数调用: ${functionName}(${parameters})`, "info");
+						});
+					}
+
+					// ==================== 响应式属性绑定 ====================
+					// 连接响应式属性变化信号，当C++端数据变化时自动更新UI
+					// 这是响应式更新的关键：不需要JS主动轮询，C++端变化时自动通知JS
+
+					if (bridge.smtcMediaInfoChanged) {
+						bridge.smtcMediaInfoChanged.connect(function () {
+							log("🔄 SMTC媒体信息已更新（响应式）", "info");
+							updateSMTCMediaInfoFromProperty();
+						});
+					}
+
+					if (bridge.smtcPlaybackStatusChanged) {
+						bridge.smtcPlaybackStatusChanged.connect(function () {
+							log("🔄 SMTC播放状态已更新（响应式）", "info");
+							updateSMTCPlaybackStatusFromProperty();
+						});
+					}
+
+					if (bridge.smtcControlCapabilitiesChanged) {
+						bridge.smtcControlCapabilitiesChanged.connect(function () {
+							log("🔄 SMTC控制能力已更新（响应式）", "info");
+							updateSMTCControlCapabilitiesFromProperty();
+						});
+					}
+
+					if (bridge.unitInfoChanged) {
+						bridge.unitInfoChanged.connect(function () {
+							log("🔄 小组件基础信息已更新（响应式）", "info");
+							updateUnitInfoFromProperty();
+						});
+					}
+
+					// 延迟初始化，确保C++端属性已准备好（参照QML实现）
+					// 使用setTimeout确保bridge对象完全初始化后再读取属性
+					setTimeout(function () {
+						// 初始化时加载一次数据（使用响应式属性）
+						updateUnitInfoFromProperty();
+						updateSMTCMediaInfoFromProperty();
+						updateSMTCPlaybackStatusFromProperty();
+						updateSMTCControlCapabilitiesFromProperty();
+
+						log("✅ 响应式属性初始化完成，数据将自动同步", "success");
+					}, 200); // 延迟200ms确保C++端属性已初始化
+
+					log("✅ 响应式属性绑定已完成，数据将自动同步", "success");
+				});
+			}
+
+			// 测试连接
+			function testConnection() {
+				if (!bridge) {
+					log("错误: bridge对象未初始化", "error");
+					return;
+				}
+				log("测试连接中...", "info");
+				bridge.post("Hello from HTML!");
+			}
+
+			// 获取当前时间
+			function getCurrentTime() {
+				if (!bridge) {
+					log("错误: bridge对象未初始化", "error");
+					return;
+				}
+				// QWebChannel的方法调用是异步的，最后一个参数是回调函数
+				bridge.getCurrentTime(function (time) {
+					log(`当前时间: ${time}`, "success");
+					alert(`当前时间: ${time}`);
+				});
+			}
+
+			// 获取主题色
+			function getThemeColor() {
+				if (!bridge) {
+					log("错误: bridge对象未初始化", "error");
+					return;
+				}
+				bridge.getThemeColor(function (color) {
+					log(`主题色: ${color}`, "success");
+					document.body.style.setProperty("--theme-color", color);
+					alert(`主题色: ${color}`);
+				});
+			}
+
+			// 加载Unit基础信息（主动获取方式，保留用于兼容）
+			function loadUnitInfo() {
+				if (!bridge) {
+					log("错误: bridge对象未初始化", "error");
+					return;
+				}
+				log("正在加载Unit基础信息（主动获取）...", "info");
+				// QWebChannel的方法调用：最后一个参数是回调函数，接收返回值
+				bridge.getUnitInfo(function (jsonStr) {
+					try {
+						const info = JSON.parse(jsonStr);
+						updateUnitInfoUI(info);
+						log("✅ Unit基础信息加载成功（主动获取）", "success");
+					} catch (e) {
+						log(`错误: 解析Unit信息失败 - ${e.message}`, "error");
+					}
+				});
+			}
+
+			// 从响应式属性更新Unit基础信息（推荐方式）
+			function updateUnitInfoFromProperty() {
+				if (!bridge || !bridge.unitInfo) {
+					return;
+				}
+				try {
+					const info = JSON.parse(bridge.unitInfo);
+					updateUnitInfoUI(info);
+				} catch (e) {
+					log(`错误: 解析Unit信息失败 - ${e.message}`, "error");
+				}
+			}
+
+			// 更新Unit基础信息UI（公共方法）
+			function updateUnitInfoUI(info) {
+				document.getElementById("widgetName").textContent =
+					info.widgetName || "-";
+				document.getElementById("widgetType").textContent = getWidgetTypeName(
+					info.widgetType
+				);
+				document.getElementById("isFocus").textContent = info.isFocus
+					? "是"
+					: "否";
+				document.getElementById("isSelect").textContent = info.isSelect
+					? "是"
+					: "否";
+				document.getElementById(
+					"size"
+				).textContent = `${info.sizeX} × ${info.sizeY}`;
+				document.getElementById("isVisible").textContent = info.isVisible
+					? "是"
+					: "否";
+			}
+
+			// 获取小组件类型名称
+			function getWidgetTypeName(type) {
+				const types = {
+					0: "HTML",
+					1: "QML",
+					2: "URL",
+					3: "Unknown",
+				};
+				return types[type] || "Unknown";
+			}
+
+			// 获取小组件属性
+			function getWidgetProperty(propertyName) {
+				if (!bridge) {
+					log("错误: bridge对象未初始化", "error");
+					return;
+				}
+				log(`正在获取属性: ${propertyName}...`, "info");
+				// QWebChannel方法调用：参数1是属性名，参数2是回调函数
+				bridge.getWidgetProperty(propertyName, function (jsonStr) {
+					try {
+						const result = JSON.parse(jsonStr);
+						log(
+							`属性 ${propertyName} = ${JSON.stringify(result.value)}`,
+							"success"
+						);
+						alert(`${propertyName}: ${JSON.stringify(result.value)}`);
+					} catch (e) {
+						log(`错误: 解析属性失败 - ${e.message}`, "error");
+					}
+				});
+			}
+
+			// 加载SMTC媒体信息（主动获取方式，保留用于兼容）
+			function loadSMTCMediaInfo() {
+				if (!bridge) {
+					log("错误: bridge对象未初始化", "error");
+					return;
+				}
+				log("正在加载SMTC媒体信息（主动获取）...", "info");
+				bridge.getSMTCMediaInfo(function (jsonStr) {
+					try {
+						const info = JSON.parse(jsonStr);
+						updateSMTCMediaInfoUI(info);
+						log("✅ SMTC媒体信息加载成功（主动获取）", "success");
+					} catch (e) {
+						log(`错误: 解析SMTC媒体信息失败 - ${e.message}`, "error");
+					}
+				});
+			}
+
+			// 从响应式属性更新SMTC媒体信息（推荐方式）
+			function updateSMTCMediaInfoFromProperty() {
+				if (!bridge || !bridge.smtcMediaInfo) {
+					return;
+				}
+				try {
+					const info = JSON.parse(bridge.smtcMediaInfo);
+					updateSMTCMediaInfoUI(info);
+				} catch (e) {
+					log(`错误: 解析SMTC媒体信息失败 - ${e.message}`, "error");
+				}
+			}
+
+			// 更新SMTC媒体信息UI（公共方法）
+			function updateSMTCMediaInfoUI(info) {
+				if (!info.enabled) {
+					document.getElementById("smtcStatus").textContent =
+						"❌ SMTC功能未启用";
+					document.getElementById("smtcStatus").className = "status error";
+					// 隐藏专辑封面
+					document.getElementById("albumArtImage").style.display = "none";
+					return;
+				}
+				document.getElementById("smtcStatus").textContent =
+					"✅ SMTC功能已启用（响应式）";
+				document.getElementById("smtcStatus").className = "status success";
+				document.getElementById("mediaTitle").textContent =
+					info.mediaTitle || "-";
+				document.getElementById("mediaArtist").textContent =
+					info.mediaArtist || "-";
+				document.getElementById("mediaAlbum").textContent =
+					info.mediaAlbum || "-";
+				document.getElementById("appName").textContent = info.appName || "-";
+				document.getElementById("playbackStatus").textContent =
+					info.playbackStatus || "-";
+
+				// 更新专辑封面（参照QML实现）
+				const albumArtImg = document.getElementById("albumArtImage");
+				if (info.hasAlbumArt && info.albumArtBase64) {
+					albumArtImg.src = "data:image/jpeg;base64," + info.albumArtBase64;
+					albumArtImg.style.display = "block";
+					albumArtImg.alt = info.mediaAlbum || "专辑封面";
+					if (info.albumArtSize) {
+						albumArtImg.title = "尺寸: " + info.albumArtSize;
+					}
+				} else {
+					albumArtImg.style.display = "none";
+				}
+			}
+
+			// 加载SMTC播放状态（主动获取方式，保留用于兼容）
+			function loadSMTCPlaybackStatus() {
+				if (!bridge) {
+					log("错误: bridge对象未初始化", "error");
+					return;
+				}
+				log("正在加载SMTC播放状态（主动获取）...", "info");
+				bridge.getSMTCPlaybackStatus(function (jsonStr) {
+					try {
+						const status = JSON.parse(jsonStr);
+						updateSMTCPlaybackStatusUI(status);
+						log("✅ SMTC播放状态加载成功（主动获取）", "success");
+					} catch (e) {
+						log(`错误: 解析SMTC播放状态失败 - ${e.message}`, "error");
+					}
+				});
+			}
+
+			// 从响应式属性更新SMTC播放状态（推荐方式）
+			function updateSMTCPlaybackStatusFromProperty() {
+				if (!bridge || !bridge.smtcPlaybackStatus) {
+					return;
+				}
+				try {
+					const status = JSON.parse(bridge.smtcPlaybackStatus);
+					updateSMTCPlaybackStatusUI(status);
+				} catch (e) {
+					log(`错误: 解析SMTC播放状态失败 - ${e.message}`, "error");
+				}
+			}
+
+			// 更新SMTC播放状态UI（公共方法）
+			function updateSMTCPlaybackStatusUI(status) {
+				if (!status.enabled) {
+					return;
+				}
+				document.getElementById("playbackStatus").textContent =
+					status.playbackStatus || "-";
+				document.getElementById("playbackProgress").textContent = `${
+					status.playbackProgress
+				}% (${formatTime(status.playbackPosition)} / ${formatTime(
+					status.playbackDuration
+				)})`;
+			}
+
+			// 加载SMTC控制能力（主动获取方式，保留用于兼容）
+			function loadSMTCControlCapabilities() {
+				if (!bridge) {
+					log("错误: bridge对象未初始化", "error");
+					return;
+				}
+				log("正在加载SMTC控制能力（主动获取）...", "info");
+				bridge.getSMTCControlCapabilities(function (jsonStr) {
+					try {
+						const capabilities = JSON.parse(jsonStr);
+						updateSMTCControlCapabilitiesUI(capabilities);
+						log("✅ SMTC控制能力加载成功（主动获取）", "success");
+					} catch (e) {
+						log(`错误: 解析SMTC控制能力失败 - ${e.message}`, "error");
+					}
+				});
+			}
+
+			// 从响应式属性更新SMTC控制能力（推荐方式）
+			function updateSMTCControlCapabilitiesFromProperty() {
+				if (!bridge || !bridge.smtcControlCapabilities) {
+					return;
+				}
+				try {
+					const capabilities = JSON.parse(bridge.smtcControlCapabilities);
+					updateSMTCControlCapabilitiesUI(capabilities);
+				} catch (e) {
+					log(`错误: 解析SMTC控制能力失败 - ${e.message}`, "error");
+				}
+			}
+
+			// 更新SMTC控制能力UI（公共方法）
+			function updateSMTCControlCapabilitiesUI(capabilities) {
+				if (!capabilities.enabled) {
+					document.getElementById("controlStatus").textContent =
+						"❌ SMTC功能未启用";
+					document.getElementById("controlStatus").className = "status error";
+					return;
+				}
+				document.getElementById("controlStatus").textContent =
+					"✅ SMTC控制可用（响应式）";
+				document.getElementById("controlStatus").className = "status success";
+				document.getElementById("btnPlay").disabled = !capabilities.canPlay;
+				document.getElementById("btnPause").disabled = !capabilities.canPause;
+				document.getElementById("btnStop").disabled = !capabilities.canStop;
+				document.getElementById("btnNext").disabled = !capabilities.canSkipNext;
+				document.getElementById("btnPrevious").disabled =
+					!capabilities.canSkipPrevious;
+			}
+
+			// 控制SMTC
+			function controlSMTC(action) {
+				if (!bridge) {
+					log("错误: bridge对象未初始化", "error");
+					return;
+				}
+				log(`正在执行SMTC控制: ${action}...`, "info");
+
+				// 根据操作类型调用不同的方法
+				let methodName = "";
+				switch (action) {
+					case "play":
+						methodName = "playSMTCMedia";
+						break;
+					case "pause":
+						methodName = "pauseSMTCMedia";
+						break;
+					case "stop":
+						methodName = "stopSMTCMedia";
+						break;
+					case "next":
+						methodName = "skipSMTCNext";
+						break;
+					case "previous":
+						methodName = "skipSMTCPrevious";
+						break;
+					default:
+						log(`错误: 未知的SMTC操作: ${action}`, "error");
+						return;
+				}
+
+				// 调用bridge方法，最后一个参数是回调函数
+				if (bridge[methodName]) {
+					bridge[methodName](function (success) {
+						if (success) {
+							log(`✅ SMTC控制成功: ${action}`, "success");
+						} else {
+							log(`❌ SMTC控制失败: ${action}`, "error");
+						}
+					});
+				} else {
+					log(`错误: bridge对象没有${methodName}方法`, "error");
+				}
+			}
+
+			// 格式化时间（毫秒转MM:SS）
+			function formatTime(ms) {
+				if (!ms || ms < 0) return "00:00";
+				const totalSeconds = Math.floor(ms / 1000);
+				const minutes = Math.floor(totalSeconds / 60);
+				const seconds = totalSeconds % 60;
+				return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
+					2,
+					"0"
+				)}`;
+			}
+
+			// 测试信号连接
+			function testSignalConnection() {
+				if (!bridge) {
+					log("错误: bridge对象未初始化", "error");
+					return;
+				}
+				log("测试信号连接...", "info");
+				if (bridge.messageReceived) {
+					log("✅ messageReceived信号已连接", "success");
+				} else {
+					log("❌ messageReceived信号未找到", "error");
+				}
+			}
+
+			// 页面加载完成后初始化WebChannel
+			window.addEventListener("DOMContentLoaded", function () {
+				log("页面加载完成，开始初始化WebChannel...", "info");
+				// 延迟一下确保qt对象已准备好
+				setTimeout(initWebChannel, 100);
+			});
+
+			// 注意：使用响应式属性后，不再需要定期轮询
+			// 数据变化时会自动通过信号通知，无需定时刷新
+			// 以下代码已注释，仅作为对比示例
+			// setInterval(function () {
+			// 	if (bridge) {
+			// 		loadSMTCPlaybackStatus(); // 主动获取方式
+			// 	}
+			// }, 2000); // 每2秒刷新一次播放状态
+		</script>
+	</body>
+</html>

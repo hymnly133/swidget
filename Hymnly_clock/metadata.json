@@ -1,0 +1,32 @@
+{
+    "acceptsMouseEvents": false,
+    "author": "",
+    "authorEmail": "",
+    "authorWebsite": "",
+    "customFields": {
+    },
+    "defaultGridSize": {
+        "cols": 1,
+        "rows": 1
+    },
+    "description": "",
+    "displayName": "Hymnly的时钟",
+    "functions": [
+    ],
+    "manualFileName": "",
+    "minimumAppVersion": "",
+    "name": "Hymnly_clock",
+    "permissions": [
+    ],
+    "previewImageFileName": "",
+    "supportTypes": {
+        "supportsFile": false,
+        "supportsImage": false,
+        "supportsVideo": false
+    },
+    "tags": [
+    ],
+    "version": "1.0.0",
+    "widgetFileName": "Hymnly的时钟.html",
+    "widgetType": "Html"
+}
