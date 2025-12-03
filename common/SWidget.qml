@@ -3,6 +3,7 @@ import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import Qt5Compat.GraphicalEffects
 /**
+ * Sapphire Version: 1.6.0.2
  * @brief SWidget - QML小组件标准化接口
  * 
  * SWidget是C++端和QML自定义组件的标准化接口，提供：
@@ -46,12 +47,11 @@ Item {
     property bool unitIsSelect: false
     property bool unitSimpleMode: false
     property int unitRadius: 8
-    property bool roundCornerEnabled: false
     
     // ==================== 样式颜色相关属性 ====================
     // 重命名currentThemeColor为styleThemeColor，并添加其他颜色相关属性
     property color styleThemeColor: "#007ACC"  // 主题色（根据配置可能返回系统主题色或自定义主题色）
-    property color currentThemeColor: styleThemeColor //兼容旧属性
+    property color currentThemeColor: styleThemeColor //兼容旧名称
     property color styleBackgroundColor: "transparent"  // 背景色
     property color styleTextColor: "#FFFFFF"  // 文字色
     property color styleHighlightColor: "#007ACC"  // 高亮色
@@ -71,14 +71,13 @@ Item {
     property int styleIconShadowBlurRadius: 10  // 图标阴影特效半径（1-100）
     
     // UI整体参数
-    property int styleAcrylicMixStrength: 50  // 亚克力混合主题色强度（0-255）
     property int styleUiOverallAlpha: 255  // UI整体不透明度（0-255）
     
     // ==================== 其他属性 ====================
-    property string currentOperationMode: "desktop"
-    property bool unitVisible: true
-    property string widgetDataPath: ""
-    property bool globalRoundCornerEnabled: true
+    property string currentOperationMode: "desktop"  // 当前操作模式（desktop: 桌面模式，edit: 编辑模式）
+    property bool unitVisible: true         // 更灵活的使用的可见性（如当前分页隐藏时为false，若组件长时间消耗高性能，如持续播放视频，可以根据该属性暂停以节省性能）
+    property string widgetDataPath: ""      // 组件数据路径（由C++端设置，QML端只读，你可以使用QSettings自行读取和保存数据）
+    property bool globalRoundCornerEnabled: true  // 内置的全局圆角，若开启，则会为组件内容套上完整的蒙版，限制内部元素，你可以关闭并根据unitRadius自绘圆角
     
     // ==================== 鼠标状态属性 ====================
     /**
@@ -89,7 +88,7 @@ Item {
 
     
     // ==================== ProxyFile属性定义 ====================
-    // 注意：proxyFilePath是只读属性，数据源在C++端，QML端只能读取和绑定显示
+    // 注意：proxyFilePath数据源在C++端，实际环境中请不要直接修改该属性，QML端只能读取和绑定显示
     property string proxyFilePath: ""  // 代理文件路径（由C++端设置，QML端只读）
     
     // 计算属性：基于proxyFilePath自动计算文件名
@@ -127,6 +126,7 @@ Item {
      * 1: OnlyEdit - 仅编辑模式 - 仅在编辑模式下接收鼠标事件
      * 2: OnlyNonEdit - 仅非编辑模式 - 仅在非编辑模式下接收鼠标事件
      * 3: Never - 从不 - 从不接收鼠标事件
+     * 注意：这里的鼠标事件是“传输到QML内部”的事件，对于应用内默认事件，如leftMousePressed、unitIsFocus不受影响
      */
     enum MouseEventMode {
         Always = 0,
@@ -394,7 +394,6 @@ Item {
      * @param defaultValue 默认值
      * 
      * 在Component.onCompleted中调用此方法注册需要持久化的属性
-     * 注意：QML端不再缓存数据，仅用于向C++端注册属性声明
      */
     function registerPersistentProperty(name, defaultValue) {
         if (unit && unit.qmlModule) {
@@ -410,7 +409,7 @@ Item {
      * @param name 属性名
      * @param value 属性值
      * 
-     * 此方法由C++端调用，直接设置属性并触发onPersistentPropertyLoaded通知
+     * 此方法由C++端调用，直接设置属性并触发persistentPropertyLoaded通知
      */
     function setPersistentProperty(name, value) {
         console.log("SWidget: 设置持久化属性:", name, "值:", value)
@@ -418,40 +417,20 @@ Item {
         if (swidget.hasOwnProperty(name)) {
             swidget[name] = value
             // 触发加载通知
-            onPersistentPropertyLoaded(name, value)
+            persistentPropertyLoaded(name, value)
         } else {
             console.log("SWidget: 属性不存在，跳过设置:", name)
         }
     }
     
     /**
-     * @brief C++加载属性时调用（用户可重写）
+     * @brief C++加载属性时通知
      * @param name 属性名
      * @param value 属性值
      * 
-     * 默认实现：已由setPersistentProperty自动设置属性
-     * 用户可以重写此方法实现自定义的加载逻辑（例如验证、转换等）
      */
-    function onPersistentPropertyLoaded(name, value) {
-        // 默认实现：属性已由setPersistentProperty设置
-        // 用户可以重写此方法实现自定义逻辑
-    }
+    signal persistentPropertyLoaded(string name, var value)
     
-    /**
-     * @brief C++保存前调用，返回要保存的属性映射（用户可重写）
-     * @return 包含所有要保存的持久化属性的对象
-     * 
-     * 默认实现：返回空对象，C++端会直接从QML属性读取值
-     * 用户可以重写此方法，返回自定义的属性映射（例如添加计算属性）
-     * 
-     * 注意：C++端会直接从QML属性读取已注册的持久化属性的当前值
-     */
-    function onPersistentPropertySave() {
-        // 默认实现：返回空对象，C++端会直接读取QML属性值
-        // 用户可以重写此方法返回自定义属性（例如计算属性）
-        console.log("SWidget: 保存持久化属性（由C++端直接读取属性值）")
-        return {}
-    }
     
     // ==================== SMTC方法 ====================
     
@@ -543,10 +522,7 @@ Item {
      * @brief 处理代理文件被删除事件（由C++端调用）
      * 注意：proxyFilePath是只读属性，由C++端负责清除，QML端不需要操作
      */
-    function onProxyFileRemoved() {
-        console.log("SWidget: 代理文件被删除")
-        // proxyFilePath由C++端清除，proxyFileName和proxyFileIcon会自动更新（计算属性）
-    }
+    signal proxyFileRemoved()
     
     /**
      * @brief 处理代理文件被重命名事件（由C++端调用）
@@ -554,10 +530,7 @@ Item {
      * @param newPath 新文件路径
      * 注意：proxyFilePath由C++端更新，proxyFileName和proxyFileIcon会自动更新（计算属性）
      */
-    function onProxyFileRenamed(oldPath, newPath) {
-        console.log("SWidget: 代理文件被重命名", oldPath, "->", newPath)
-        // proxyFilePath由C++端更新，proxyFileName和proxyFileIcon会自动更新（计算属性）
-    }
+    signal proxyFileRenamed(string oldPath, string newPath)
 
 
     // ==================== 打开代理文件方法 ====================
