@@ -1,4 +1,7 @@
 module SWidgets
 SWidget 1.0 ./SWidget.qml
 SWebWidget 1.0 ./SWebWidget.qml
+SUnit 1.0 ./SUnit.qml
+SUnitIconModule 1.0 ./SUnitIconModule.qml
+SUnitTextModule 1.0 ./SUnitTextModule.qml
 
