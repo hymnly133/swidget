@@ -54,6 +54,7 @@ swidget/
 
 ### 2. 创建你的第一个小组件
 
+0. 确保Sapphire版本>=1.6.0.0 (Steam Beta版)
 1. 打开 Sapphire 小组件编辑器
 2. 点击"创建新小组件"
 3. 选择"从模板创建" → 选择 QML 或 HTML 模板
