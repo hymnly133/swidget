@@ -1,7 +1,8 @@
-import QtQuick 2.15
+﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 import Qt5Compat.GraphicalEffects
+import QtWebEngine 6.10
 /**
  * Sapphire Version: 1.6.0.2
  * @brief SWidget - QML小组件标准化接口
@@ -40,13 +41,15 @@ Item {
     
     // ==================== 基础属性定义 ====================
     // 属性有默认值，C++端可以直接通过SWidget实例设置这些属性
-    property var unit: unitContext || null  // SWidgetUnit实例，由C++端设置
+    property var unit: unitContext || null  // SWidgetUnit实例，由C++端通过上下文设置
     
-    property color unitMainColor: "#007ACC"
-    property bool unitIsFocus: false
-    property bool unitIsSelect: false
-    property bool unitSimpleMode: false
-    property int unitRadius: 8
+    // 使用属性绑定，直接从unit获取值（如果unit存在）
+    // 注意：unitMainColor需要从StyleHelper获取themeColor，不是unit的属性，所以保持手动设置
+    property color unitMainColor: "#007ACC"  // 由C++端通过StyleHelper信号自动更新
+    property bool unitIsFocus: (unit && unit.isFocus !== undefined) ? unit.isFocus : false
+    property bool unitIsSelect: (unit && unit.isSelect !== undefined) ? unit.isSelect : false
+    property bool unitSimpleMode: (unit && unit.simpleMode !== undefined) ? unit.simpleMode : false
+    property int unitRadius: 8  // 此属性由C++端通过StyleHelper信号自动更新
     
     // ==================== 样式颜色相关属性 ====================
     // 重命名currentThemeColor为styleThemeColor，并添加其他颜色相关属性
@@ -75,9 +78,20 @@ Item {
     
     // ==================== 其他属性 ====================
     property string currentOperationMode: "desktop"  // 当前操作模式（desktop: 桌面模式，edit: 编辑模式）
-    property bool unitVisible: true         // 更灵活的使用的可见性（如当前分页隐藏时为false，若组件长时间消耗高性能，如持续播放视频，可以根据该属性暂停以节省性能）
+    property bool unitVisible: (unit && unit.visible !== undefined) ? unit.visible : true  // 使用属性绑定，直接从unit获取可见性
     property string widgetDataPath: ""      // 组件数据路径（由C++端设置，QML端只读，你可以使用QSettings自行读取和保存数据）
     property bool globalRoundCornerEnabled: true  // 内置的全局圆角，若开启，则会为组件内容套上完整的蒙版，限制内部元素，你可以关闭并根据unitRadius自绘圆角
+    /**
+     * @brief 是否启用内置打开代理文件逻辑
+     *
+     * - 默认关闭（false）
+     * - 开启后，如果当前小组件支持代理文件，则由SWidgetUnit根据全局设置
+     *   enable_single_click_open 决定在单击还是双击时自动调用 openProxyFile()
+     * - 建议小组件开发者通过此属性开启/关闭内置行为，而不再自行处理“打开文件”鼠标事件
+     */
+    property bool useBuiltInOpenProxyFile: (unit && unit.useBuiltInOpenProxyFile !== undefined)
+                                           ? unit.useBuiltInOpenProxyFile
+                                           : false
     
     // ==================== 鼠标状态属性 ====================
     /**
@@ -86,24 +100,23 @@ Item {
      */
     property bool leftMousePressed: false
 
-    
+    // 全局WebEngineProfile由C++端创建并通过globalWebEngineProfile暴露给QML
     // ==================== ProxyFile属性定义 ====================
-    // 注意：proxyFilePath数据源在C++端，实际环境中请不要直接修改该属性，QML端只能读取和绑定显示
-    property string proxyFilePath: ""  // 代理文件路径（由C++端设置，QML端只读）
+    // 注意：所有ProxyFile相关属性都通过QProperty绑定自动更新，QML端只读
+    // 使用属性绑定，直接从unit获取值（如果unit存在）
+    // 当C++端的QProperty变化时，QML端会自动更新
     
-    // 计算属性：基于proxyFilePath自动计算文件名
-    readonly property string proxyFileName: (proxyFilePath && proxyFilePath !== "" && unit && unit.qmlModule) 
-        ? unit.qmlModule.getProxyFileName(proxyFilePath) 
-        : ""
+    // 代理文件路径（由C++端QProperty自动更新）
+    property string proxyFilePath: (unit && unit.proxyFilePath !== undefined) ? unit.proxyFilePath : ""
     
-    // 计算属性：基于proxyFilePath自动计算文件图标
-    readonly property string proxyFileIcon: (proxyFilePath && proxyFilePath !== "" && unit && unit.qmlModule) 
-        ? unit.qmlModule.getProxyFileIcon(proxyFilePath) 
-        : ""
+    // 代理文件名（由C++端QProperty自动更新）
+    readonly property string proxyFileName: (unit && unit.proxyFileName !== undefined) ? unit.proxyFileName : ""
+    
+    // 代理文件图标（Base64编码，由C++端QProperty自动更新）
+    readonly property string proxyFileIcon: (unit && unit.proxyFileIcon !== undefined) ? unit.proxyFileIcon : ""
 
-    readonly property color proxyFileColor: (proxyFilePath && proxyFilePath !== "" && unit && unit.qmlModule) 
-        ? unit.qmlModule.getProxyFileColor(proxyFilePath) 
-        : styleThemeColor
+    // 代理文件颜色（由C++端QProperty自动更新）
+    readonly property color proxyFileColor: (unit && unit.proxyFileColor !== undefined) ? unit.proxyFileColor : styleThemeColor
     
     // ==================== 拖拽相关属性 ====================
     /**
@@ -559,6 +572,15 @@ Item {
             console.warn("SWidget: unit或QML模块不可用，无法打开文件位置")
         }
     }
+
+    // // 同步内置打开文件开关到C++侧
+    // onUseBuiltInOpenProxyFileChanged: {
+    //     if (unit && unit.useBuiltInOpenProxyFile !== undefined
+    //             && unit.useBuiltInOpenProxyFile !== useBuiltInOpenProxyFile) {
+    //         unit.useBuiltInOpenProxyFile = useBuiltInOpenProxyFile
+    //         console.log("SWidget: 更新内置打开代理文件开关:", useBuiltInOpenProxyFile)
+    //     }
+    // }
     // ==================== 拖拽事件处理方法 ====================
     
     /**

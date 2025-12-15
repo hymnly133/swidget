@@ -1,7 +1,7 @@
 ﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtWebEngine 1.15
-import QtWebChannel 1.15
+import QtWebEngine 6.10
+import QtWebChannel 6.10
 import Qt5Compat.GraphicalEffects
 // import "qrc:/resources/widgets/common" as Common
 
@@ -13,6 +13,7 @@ import Qt5Compat.GraphicalEffects
  * - WebChannel支持（C++与网页端双向通信）
  * - 鼠标事件处理（根据操作模式）
  * - 透明背景支持
+ * - 响应式属性支持（通过WebChannel自动同步）
  * 
  * 使用方法：
  * SWebWidget {
@@ -20,7 +21,33 @@ import Qt5Compat.GraphicalEffects
  *     // 通过webUrl属性设置要加载的URL或本地文件路径
  *     webUrl: "file:///path/to/file.html"
  * }
+ * 
+ * JavaScript端响应式属性使用示例：
+ * // 在HTML中，通过WebChannel访问bridge对象
+ * // bridge对象包含以下响应式属性：
+ * // - bridge.smtcMediaInfo (JSON字符串，SMTC媒体信息)
+ * // - bridge.smtcPlaybackStatus (JSON字符串，SMTC播放状态)
+ * // - bridge.smtcControlCapabilities (JSON字符串，SMTC控制能力)
+ * // - bridge.unitInfo (JSON字符串，小组件基础信息)
+ * // - bridge.proxyFilePath (字符串，代理文件路径)
+ * 
+ * // 连接属性变化信号（响应式更新）
+ * bridge.smtcMediaInfoChanged.connect(function() {
+ *     var mediaInfo = JSON.parse(bridge.smtcMediaInfo);
+ *     console.log("媒体信息更新:", mediaInfo);
+ * });
+ * 
+ * bridge.unitInfoChanged.connect(function() {
+ *     var unitInfo = JSON.parse(bridge.unitInfo);
+ *     console.log("小组件信息更新:", unitInfo);
+ *     // unitInfo包含：widgetName, widgetType, isFocus, isSelect, 
+ *     // simpleMode, sizeX, sizeY, width, height, scale, opacity等
+ * });
  */
+
+
+
+
 SWidget {
     id: swebwidget
     objectName: "SWebWidget"
@@ -29,28 +56,26 @@ SWidget {
     property url webUrl: webUrlFromContext||""  // 要加载的URL或本地文件路径（从上下文属性获取）
     // property url webUrlFromContext: ""  // 从C++端通过上下文属性设置的URL
     property var webBridge: null  // C++端的SWidgetWebBridge对象（由C++端设置）
+    property double zoomFactor: 1.0  // 缩放因子（由C++端设置）
     
     // ==================== 隐藏SWidget的默认contentItem ====================
-    // 隐藏SWidget的默认contentItem，使用WebEngineView替代
+
     Component.onCompleted: {
-        // swebwidget.contentItem.visible = false
         console.log("webUrlFromContext:", webUrlFromContext);
         console.log("webUrl:", webUrl);
     }
-    
+
+
     // ==================== WebEngineView组件 ====================
     WebEngineView {
         id: webView
         anchors.fill: parent
         backgroundColor: "transparent"
         z: 1
-        
-        // 设置WebEngineView属性
-        settings.javascriptEnabled: true
-        settings.showScrollBars: false
-        settings.allowRunningInsecureContent: true
-        settings.localContentCanAccessFileUrls: true
-        
+
+        profile: globalWebEngineProfile
+        zoomFactor: swebwidget.zoomFactor
+
         // 在编辑模式下禁用WebEngineView的交互，但保持显示
         enabled: swebwidget.currentOperationMode !== "edit"
         
@@ -79,13 +104,13 @@ SWidget {
         // 设置WebChannel到WebEngineView
         webChannel: qmlWebChannel
         
-        // 当webBridge属性变化时，重新注册
         Connections {
             target: swebwidget
             function onWebBridgeChanged() {
                 if (swebwidget.webBridge) {
                     qmlWebChannel.registerObject("bridge", swebwidget.webBridge);
                     console.log("SWebWidget: bridge对象已更新到WebChannel");
+
                 }
             }
         }
@@ -94,14 +119,30 @@ SWidget {
         onLoadingChanged: function(loadingInfo) {
             if (loadingInfo.status === WebEngineView.LoadSucceededStatus) {
                 console.log("SWebWidget: 页面加载完成");
+
+                // 通知C++端HTML页面已加载完成，可以发送持久化属性了
+                // 先用 callLater 等待 WebChannel 初始化，再通过定时器延迟 200ms 触发
+                Qt.callLater(function() {
+                    notifyPersistentTimer.start();
+                });
             }
         }
-        
-        // 在Qt6中，确保WebEngineView正确支持透明渲染
-        Component.onCompleted: {
-            // 确保背景色始终透明
-            backgroundColor = "transparent";
+
+        // 延迟通知持久化属性加载完成（避免页面脚本和 WebChannel 尚未就绪）
+        Timer {
+            id: notifyPersistentTimer
+            interval: 200
+            repeat: false
+            onTriggered: {
+                if (swebwidget.webBridge) {
+                    swebwidget.webBridge.notifyAllPersistentPropertiesLoaded();
+                } else {
+                    console.log("SWebWidget: webBridge对象未设置");
+                    // console.log("mainSWebWidget: webBridge对象:", swebwidget.webBridge);
+                }
+            }
         }
+
     }
 }
 

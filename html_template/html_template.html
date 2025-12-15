@@ -86,6 +86,50 @@
 			button:active {
 				transform: scale(0.98);
 			}
+
+			.input-section {
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+				align-items: center;
+				margin-top: 20px;
+				width: 100%;
+				max-width: 400px;
+			}
+
+			.input-label {
+				font-size: 14px;
+				font-weight: bold;
+				color: #ffffff;
+			}
+
+			.persistent-input {
+				width: 100%;
+				padding: 10px 15px;
+				background: rgba(255, 255, 255, 0.1);
+				color: #ffffff;
+				border: 1px solid rgba(255, 255, 255, 0.2);
+				border-radius: 6px;
+				font-size: 14px;
+				font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+				transition: all 0.3s;
+			}
+
+			.persistent-input:focus {
+				outline: none;
+				border-color: var(--theme-color, #007acc);
+				background: rgba(255, 255, 255, 0.15);
+			}
+
+			.persistent-input::placeholder {
+				color: rgba(255, 255, 255, 0.5);
+			}
+
+			.input-hint {
+				font-size: 12px;
+				color: #a0a0a0;
+				text-align: center;
+			}
 		</style>
 	</head>
 	<body>
@@ -109,6 +153,20 @@
 				</div>
 			</div>
 
+			<div class="input-section">
+				<label class="input-label" for="persistentTextInput"
+					>持久化文本（示例）</label
+				>
+				<input
+					type="text"
+					id="persistentTextInput"
+					class="persistent-input"
+					placeholder="输入文本，关闭后重新打开会保留..."
+					oninput="onPersistentTextChanged(this.value)"
+				/>
+				<div class="input-hint">此文本会自动保存，重新加载小组件后会恢复</div>
+			</div>
+
 			<div class="button-group">
 				<button onclick="refreshInfo()">刷新信息</button>
 				<button onclick="testConnection()">测试连接</button>
@@ -118,6 +176,8 @@
 		<script>
 			// WebChannel和bridge对象
 			let bridge = null;
+			// 持久化文本属性名
+			const PERSISTENT_TEXT_PROPERTY = "persistentText";
 
 			// 初始化WebChannel
 			function initWebChannel() {
@@ -151,6 +211,14 @@
 						});
 					}
 
+					// 连接持久化属性加载完成信号
+					if (bridge.persistentPropertyLoaded) {
+						bridge.persistentPropertyLoaded.connect(function (name, value) {
+							console.log("📦 持久化属性已加载:", name, value);
+							onPersistentPropertyLoaded(name, value);
+						});
+					}
+
 					// 初始化数据
 					init();
 				});
@@ -158,6 +226,20 @@
 
 			// 初始化
 			async function init() {
+				// 注册持久化属性（在页面加载时调用）
+				if (bridge.registerPersistentProperty) {
+					try {
+						// 注册持久化文本属性，默认值为空字符串
+						bridge.registerPersistentProperty(
+							PERSISTENT_TEXT_PROPERTY,
+							JSON.stringify("")
+						);
+						console.log("✅ 持久化属性已注册:", PERSISTENT_TEXT_PROPERTY);
+					} catch (e) {
+						console.error("注册持久化属性失败:", e);
+					}
+				}
+
 				// 获取主题色
 				if (bridge.getThemeColor) {
 					try {
@@ -224,6 +306,41 @@
 				} catch (e) {
 					document.getElementById("smtcEnabled").textContent = "未启用";
 					document.getElementById("smtcEnabled").style.color = "#f44336";
+				}
+			}
+
+			// 持久化文本输入框值变化处理
+			function onPersistentTextChanged(value) {
+				if (!bridge || !bridge.setPersistentProperty) {
+					console.warn("bridge或setPersistentProperty方法不可用");
+					return;
+				}
+
+				try {
+					// 设置持久化属性值
+					bridge.setPersistentProperty(
+						PERSISTENT_TEXT_PROPERTY,
+						JSON.stringify(value)
+					);
+					console.log("💾 持久化文本已保存:", value);
+				} catch (e) {
+					console.error("设置持久化属性失败:", e);
+				}
+			}
+
+			// 持久化属性加载完成处理
+			function onPersistentPropertyLoaded(name, value) {
+				if (name === PERSISTENT_TEXT_PROPERTY) {
+					try {
+						const textValue = JSON.parse(value);
+						const inputElement = document.getElementById("persistentTextInput");
+						if (inputElement) {
+							inputElement.value = textValue;
+							console.log("📥 持久化文本已恢复:", textValue);
+						}
+					} catch (e) {
+						console.error("解析持久化属性值失败:", e);
+					}
 				}
 			}
 
