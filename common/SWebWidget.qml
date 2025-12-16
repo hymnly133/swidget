@@ -1,7 +1,7 @@
 ﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtWebEngine 6.10
-import QtWebChannel 6.10
+import QtWebEngine
+import QtWebChannel
 import Qt5Compat.GraphicalEffects
 // import "qrc:/resources/widgets/common" as Common
 
@@ -84,6 +84,33 @@ SWidget {
             request.accepted = true;  // 阻止显示默认右键菜单
         }
         
+        // 处理颜色选择对话框请求
+        onColorDialogRequested: function(request) {
+            // 阻止显示默认对话框
+            request.accepted = true;
+            
+            // 创建并显示自定义颜色选择对话框（独立窗口）
+            var dialog = colorDialogComponent.createObject(null, {
+                initialColor: request.color || "#000000"
+            });
+            
+            // 处理对话框结果
+            dialog.accepted.connect(function() {
+                // 接受请求并设置选择的颜色
+                request.dialogAccept(dialog.selectedColor);
+                dialog.destroy();
+            });
+            
+            dialog.rejected.connect(function() {
+                // 拒绝请求
+                request.dialogReject();
+                dialog.destroy();
+            });
+            
+            // 显示对话框（独立窗口）
+            dialog.show();
+        }
+        
         // 加载URL
         url: swebwidget.webUrl
         
@@ -143,6 +170,14 @@ SWidget {
             }
         }
 
+        // ==================== 颜色选择对话框组件 ====================
+        Component {
+            id: colorDialogComponent
+            SColorDialog {}
+        }
+
     }
+    
+
 }
 
