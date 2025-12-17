@@ -98,8 +98,10 @@ Item {
      * @brief 左键鼠标按下状态
      * 由C++端根据鼠标事件自动更新，QML端可以直接绑定使用
      */
-    property bool leftMousePressed: false
+    
+    property bool leftButtonPressed: (unit && unit.leftButtonPressed !== undefined) ? unit.leftButtonPressed : false
 
+    readonly property bool leftMousePressed: leftButtonPressed
     // 全局WebEngineProfile由C++端创建并通过globalWebEngineProfile暴露给QML
     // ==================== ProxyFile属性定义 ====================
     // 注意：所有ProxyFile相关属性都通过QProperty绑定自动更新，QML端只读
