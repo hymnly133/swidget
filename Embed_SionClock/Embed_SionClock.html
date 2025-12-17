@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>全屏透明圆角时钟</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			body {
+				font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+				min-height: 100vh;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				position: relative;
+				overflow: hidden;
+				color: rgba(255, 255, 255, 0.95);
+				transition: transform 0.3s ease;
+			}
+
+			.clock-container {
+				width: 100vw;
+				height: 100vh;
+				border-radius: 30px;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				align-items: center;
+				padding: 2rem;
+				position: relative;
+			}
+
+			.date-display {
+				font-size: 3.5rem;
+				font-weight: 300;
+				letter-spacing: 1px;
+				text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+				color: #ffffff;
+			}
+
+			.time-container {
+				position: relative;
+				display: flex;
+				align-items: baseline;
+				justify-content: center;
+			}
+
+			.time-display {
+				font-size: 9rem;
+				font-weight: 800;
+				letter-spacing: 2px;
+				margin-bottom: 0.5rem;
+				background: linear-gradient(to right, #fff, #eee);
+				-webkit-background-clip: text;
+				background-clip: text;
+				color: transparent;
+				text-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+			}
+
+			.ampm-display {
+				font-size: 2.5rem;
+				font-weight: 400;
+				color: #ffffff;
+				text-transform: lowercase;
+				margin-left: 15px;
+				align-self: flex-end;
+				margin-bottom: 25px;
+			}
+
+			.day-display {
+				font-size: 2rem;
+				font-weight: 300;
+				border-radius: 50px;
+				padding: 0.8rem 2.5rem;
+				margin-bottom: 1rem;
+				color: #ffffff;
+			}
+
+			.timezone {
+				font-size: 1.8rem;
+				font-weight: 300;
+				border-radius: 30px;
+				padding: 0.6rem 1.8rem;
+				letter-spacing: 1px;
+				color: #ffffff;
+			}
+
+			/* 设置按钮样式 */
+			.settings-btn {
+				position: absolute;
+				top: 30px;
+				right: 30px;
+				background: none;
+				border: none;
+				font-size: 28px;
+				cursor: pointer;
+				color: rgba(255, 255, 255, 0.8);
+				transition: all 0.5s ease;
+				z-index: 10;
+				opacity: 0;
+				transform: translateY(-10px);
+			}
+
+			body.show-settings-btn .settings-btn {
+				opacity: 1;
+				transform: translateY(0);
+			}
+
+			.settings-btn:hover {
+				color: #fff;
+				transform: scale(1.1);
+			}
+
+			/* 设置面板样式 */
+			.settings-panel {
+				display: none;
+				position: fixed;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				background-color: white;
+				border-radius: 15px;
+				box-shadow: 0 10px 50px rgba(0, 0, 0, 0.3);
+				padding: 30px;
+				width: 500px;
+				max-height: 90vh;
+				overflow-y: auto;
+				z-index: 10000;
+				color: #333;
+			}
+
+			.settings-panel h3 {
+				margin-bottom: 25px;
+				color: #333;
+				font-size: 24px;
+				text-align: center;
+				border-bottom: 1px solid #eee;
+				padding-bottom: 15px;
+			}
+
+			.form-group {
+				margin-bottom: 20px;
+				text-align: left;
+			}
+
+			label {
+				display: block;
+				margin-bottom: 8px;
+				color: #555;
+				font-size: 16px;
+				font-weight: 500;
+			}
+
+			input[type="color"],
+			input[type="number"] {
+				width: 100%;
+				padding: 12px 15px;
+				border: 1px solid #ddd;
+				border-radius: 8px;
+				font-size: 16px;
+				background: white;
+				transition: border-color 0.3s;
+			}
+
+			input:focus {
+				border-color: #3498db;
+				outline: none;
+				box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+			}
+
+			/* 自定义列表选择器样式 */
+			.custom-select {
+				position: relative;
+				width: 100%;
+			}
+
+			.custom-select-button {
+				width: 100%;
+				padding: 12px 15px;
+				border: 1px solid #ddd;
+				border-radius: 8px;
+				font-size: 16px;
+				background: white;
+				cursor: pointer;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				transition: border-color 0.3s;
+				text-align: left;
+			}
+
+			.custom-select-button:hover {
+				border-color: #3498db;
+			}
+
+			.custom-select-button.active {
+				border-color: #3498db;
+				box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+			}
+
+			.custom-select-button::after {
+				content: "▼";
+				font-size: 12px;
+				color: #666;
+				transition: transform 0.3s;
+			}
+
+			.custom-select-button.active::after {
+				transform: rotate(180deg);
+			}
+
+			.custom-select-list {
+				display: none;
+				position: absolute;
+				top: 100%;
+				left: 0;
+				right: 0;
+				background: white;
+				border: 1px solid #ddd;
+				border-radius: 8px;
+				margin-top: 4px;
+				max-height: 200px;
+				overflow-y: auto;
+				z-index: 1000;
+				box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+			}
+
+			.custom-select-list.show {
+				display: block;
+			}
+
+			.custom-select-item {
+				padding: 12px 15px;
+				cursor: pointer;
+				transition: background-color 0.2s;
+				border-bottom: 1px solid #f0f0f0;
+			}
+
+			.custom-select-item:last-child {
+				border-bottom: none;
+			}
+
+			.custom-select-item:hover {
+				background-color: #f5f5f5;
+			}
+
+			.custom-select-item.selected {
+				background-color: #3498db;
+				color: white;
+			}
+
+			.color-input-group {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+			}
+
+			.color-input-group input[type="color"] {
+				width: 50px;
+				height: 50px;
+				padding: 5px;
+				flex-shrink: 0;
+				cursor: pointer;
+				border-radius: 8px;
+			}
+
+			.color-input-group input[type="text"] {
+				flex-grow: 1;
+			}
+
+			.checkbox-group {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				margin-bottom: 10px;
+				padding: 8px 0;
+			}
+
+			.checkbox-group input[type="checkbox"] {
+				width: 20px;
+				height: 20px;
+				cursor: pointer;
+			}
+
+			.checkbox-group label {
+				margin-bottom: 0;
+				cursor: pointer;
+			}
+
+			.save-btn {
+				background-color: #3498db;
+				color: white;
+				border: none;
+				border-radius: 8px;
+				padding: 15px;
+				cursor: pointer;
+				font-size: 16px;
+				font-weight: 600;
+				width: 100%;
+				transition: background-color 0.3s;
+				margin-top: 20px;
+			}
+
+			.save-btn:hover {
+				background-color: #2980b9;
+			}
+
+			.reset-btn {
+				background-color: #e74c3c;
+				color: white;
+				border: none;
+				border-radius: 8px;
+				padding: 15px;
+				cursor: pointer;
+				font-size: 16px;
+				font-weight: 600;
+				width: 100%;
+				transition: background-color 0.3s;
+				margin-top: 10px;
+			}
+
+			.reset-btn:hover {
+				background-color: #c0392b;
+			}
+
+			/* 模态背景 */
+			.modal-backdrop {
+				display: none;
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				background-color: rgba(0, 0, 0, 0.5);
+				z-index: 9999;
+			}
+
+			@media (max-width: 768px) {
+				.clock-container {
+					width: 95vw;
+					height: 95vh;
+					padding: 1.5rem;
+				}
+
+				.date-display {
+					font-size: 2.5rem;
+				}
+
+				.time-display {
+					font-size: 6rem;
+				}
+
+				.ampm-display {
+					font-size: 1.8rem;
+					margin-bottom: 15px;
+					margin-left: 10px;
+				}
+
+				.day-display {
+					font-size: 1.8rem;
+					padding: 0.7rem 1.8rem;
+				}
+
+				.timezone {
+					font-size: 1.4rem;
+					padding: 0.5rem 1.5rem;
+				}
+
+				.settings-panel {
+					width: 90%;
+					max-width: 350px;
+					padding: 20px;
+				}
+			}
+
+			@media (max-width: 480px) {
+				.date-display {
+					font-size: 2rem;
+				}
+
+				.time-display {
+					font-size: 4rem;
+				}
+
+				.ampm-display {
+					font-size: 1.2rem;
+					margin-bottom: 10px;
+					margin-left: 5px;
+				}
+
+				.day-display {
+					font-size: 1.3rem;
+					padding: 0.6rem 1.5rem;
+				}
+
+				.timezone {
+					font-size: 1.2rem;
+					width: 90%;
+					text-align: center;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div class="clock-container">
+			<!-- 设置按钮 -->
+			<button class="settings-btn" id="settingsBtn">⚙️</button>
+
+			<div class="date-display" id="dateDisplay">2023年11月15日</div>
+			<div class="time-container">
+				<div class="time-display" id="timeDisplay">00:00:00</div>
+				<div class="ampm-display" id="ampmDisplay"></div>
+			</div>
+			<div class="day-display" id="dayDisplay">星期三</div>
+			<div class="timezone" id="timezone">东八区标准时间 (GMT+8)</div>
+		</div>
+
+		<!-- 模态背景 -->
+		<div class="modal-backdrop" id="modalBackdrop"></div>
+
+		<!-- 设置面板 -->
+		<div class="settings-panel" id="settingsPanel">
+			<h3>时钟设置</h3>
+
+			<div class="form-group">
+				<label for="dateColor">日期颜色</label>
+				<div class="color-input-group">
+					<input type="color" id="dateColor" value="#ffffff" />
+					<input type="text" id="dateColorText" value="#ffffff" />
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="timeGradientStart">时间渐变起始颜色</label>
+				<div class="color-input-group">
+					<input type="color" id="timeGradientStart" value="#ffffff" />
+					<input type="text" id="timeGradientStartText" value="#ffffff" />
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="timeGradientEnd">时间渐变结束颜色</label>
+				<div class="color-input-group">
+					<input type="color" id="timeGradientEnd" value="#eeeeee" />
+					<input type="text" id="timeGradientEndText" value="#eeeeee" />
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="dayColor">星期颜色</label>
+				<div class="color-input-group">
+					<input type="color" id="dayColor" value="#ffffff" />
+					<input type="text" id="dayColorText" value="#ffffff" />
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="timezoneColor">时区颜色</label>
+				<div class="color-input-group">
+					<input type="color" id="timezoneColor" value="#ffffff" />
+					<input type="text" id="timezoneColorText" value="#ffffff" />
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="ampmColor">AM/PM颜色</label>
+				<div class="color-input-group">
+					<input type="color" id="ampmColor" value="#ffffff" />
+					<input type="text" id="ampmColorText" value="#ffffff" />
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="dateSize">日期文字大小 (px)</label>
+				<input type="number" id="dateSize" min="20" max="100" value="40" />
+			</div>
+
+			<div class="form-group">
+				<label for="timeSize">时间文字大小 (px)</label>
+				<input type="number" id="timeSize" min="40" max="200" value="120" />
+			</div>
+
+			<div class="form-group">
+				<label for="daySize">星期文字大小 (px)</label>
+				<input type="number" id="daySize" min="20" max="80" value="32" />
+			</div>
+
+			<div class="form-group">
+				<label for="timezoneSize">时区文字大小 (px)</label>
+				<input type="number" id="timezoneSize" min="10" max="50" value="28" />
+			</div>
+
+			<div class="form-group">
+				<label for="ampmSize">AM/PM文字大小 (px)</label>
+				<input type="number" id="ampmSize" min="10" max="30" value="32" />
+			</div>
+
+			<div class="form-group">
+				<label for="dateFont">日期字体</label>
+				<div class="custom-select" id="dateFontSelect">
+					<button
+						type="button"
+						class="custom-select-button"
+						id="dateFontButton"
+					>
+						默认字体
+					</button>
+					<div class="custom-select-list" id="dateFontList">
+						<div
+							class="custom-select-item selected"
+							data-value="'Segoe UI', 'Microsoft YaHei', sans-serif"
+						>
+							默认字体
+						</div>
+						<div class="custom-select-item" data-value="Arial, sans-serif">
+							Arial
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Times New Roman', serif"
+						>
+							Times New Roman
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Courier New', monospace"
+						>
+							Courier New
+						</div>
+						<div class="custom-select-item" data-value="Georgia, serif">
+							Georgia
+						</div>
+						<div class="custom-select-item" data-value="Verdana, sans-serif">
+							Verdana
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Comic Sans MS', cursive"
+						>
+							Comic Sans MS
+						</div>
+					</div>
+				</div>
+				<input
+					type="hidden"
+					id="dateFont"
+					value="'Segoe UI', 'Microsoft YaHei', sans-serif"
+				/>
+				<div class="checkbox-group">
+					<input type="checkbox" id="dateBold" checked />
+					<label for="dateBold">加粗</label>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="timeFont">时间字体</label>
+				<div class="custom-select" id="timeFontSelect">
+					<button
+						type="button"
+						class="custom-select-button"
+						id="timeFontButton"
+					>
+						默认字体
+					</button>
+					<div class="custom-select-list" id="timeFontList">
+						<div
+							class="custom-select-item selected"
+							data-value="'Segoe UI', 'Microsoft YaHei', sans-serif"
+						>
+							默认字体
+						</div>
+						<div class="custom-select-item" data-value="Arial, sans-serif">
+							Arial
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Times New Roman', serif"
+						>
+							Times New Roman
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Courier New', monospace"
+						>
+							Courier New
+						</div>
+						<div class="custom-select-item" data-value="Georgia, serif">
+							Georgia
+						</div>
+						<div class="custom-select-item" data-value="Verdana, sans-serif">
+							Verdana
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Comic Sans MS', cursive"
+						>
+							Comic Sans MS
+						</div>
+					</div>
+				</div>
+				<input
+					type="hidden"
+					id="timeFont"
+					value="'Segoe UI', 'Microsoft YaHei', sans-serif"
+				/>
+				<div class="checkbox-group">
+					<input type="checkbox" id="timeBold" checked />
+					<label for="timeBold">加粗</label>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="dayFont">星期字体</label>
+				<div class="custom-select" id="dayFontSelect">
+					<button type="button" class="custom-select-button" id="dayFontButton">
+						默认字体
+					</button>
+					<div class="custom-select-list" id="dayFontList">
+						<div
+							class="custom-select-item selected"
+							data-value="'Segoe UI', 'Microsoft YaHei', sans-serif"
+						>
+							默认字体
+						</div>
+						<div class="custom-select-item" data-value="Arial, sans-serif">
+							Arial
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Times New Roman', serif"
+						>
+							Times New Roman
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Courier New', monospace"
+						>
+							Courier New
+						</div>
+						<div class="custom-select-item" data-value="Georgia, serif">
+							Georgia
+						</div>
+						<div class="custom-select-item" data-value="Verdana, sans-serif">
+							Verdana
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Comic Sans MS', cursive"
+						>
+							Comic Sans MS
+						</div>
+					</div>
+				</div>
+				<input
+					type="hidden"
+					id="dayFont"
+					value="'Segoe UI', 'Microsoft YaHei', sans-serif"
+				/>
+				<div class="checkbox-group">
+					<input type="checkbox" id="dayBold" checked />
+					<label for="dayBold">加粗</label>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="timezoneFont">时区字体</label>
+				<div class="custom-select" id="timezoneFontSelect">
+					<button
+						type="button"
+						class="custom-select-button"
+						id="timezoneFontButton"
+					>
+						默认字体
+					</button>
+					<div class="custom-select-list" id="timezoneFontList">
+						<div
+							class="custom-select-item selected"
+							data-value="'Segoe UI', 'Microsoft YaHei', sans-serif"
+						>
+							默认字体
+						</div>
+						<div class="custom-select-item" data-value="Arial, sans-serif">
+							Arial
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Times New Roman', serif"
+						>
+							Times New Roman
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Courier New', monospace"
+						>
+							Courier New
+						</div>
+						<div class="custom-select-item" data-value="Georgia, serif">
+							Georgia
+						</div>
+						<div class="custom-select-item" data-value="Verdana, sans-serif">
+							Verdana
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Comic Sans MS', cursive"
+						>
+							Comic Sans MS
+						</div>
+					</div>
+				</div>
+				<input
+					type="hidden"
+					id="timezoneFont"
+					value="'Segoe UI', 'Microsoft YaHei', sans-serif"
+				/>
+				<div class="checkbox-group">
+					<input type="checkbox" id="timezoneBold" checked />
+					<label for="timezoneBold">加粗</label>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="ampmFont">AM/PM字体</label>
+				<div class="custom-select" id="ampmFontSelect">
+					<button
+						type="button"
+						class="custom-select-button"
+						id="ampmFontButton"
+					>
+						默认字体
+					</button>
+					<div class="custom-select-list" id="ampmFontList">
+						<div
+							class="custom-select-item selected"
+							data-value="'Segoe UI', 'Microsoft YaHei', sans-serif"
+						>
+							默认字体
+						</div>
+						<div class="custom-select-item" data-value="Arial, sans-serif">
+							Arial
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Times New Roman', serif"
+						>
+							Times New Roman
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Courier New', monospace"
+						>
+							Courier New
+						</div>
+						<div class="custom-select-item" data-value="Georgia, serif">
+							Georgia
+						</div>
+						<div class="custom-select-item" data-value="Verdana, sans-serif">
+							Verdana
+						</div>
+						<div
+							class="custom-select-item"
+							data-value="'Comic Sans MS', cursive"
+						>
+							Comic Sans MS
+						</div>
+					</div>
+				</div>
+				<input
+					type="hidden"
+					id="ampmFont"
+					value="'Segoe UI', 'Microsoft YaHei', sans-serif"
+				/>
+				<div class="checkbox-group">
+					<input type="checkbox" id="ampmBold" checked />
+					<label for="ampmBold">加粗</label>
+				</div>
+			</div>
+
+			<div class="form-group">
+				<label for="timezoneSelect">选择时区</label>
+				<div class="custom-select" id="timezoneSelectContainer">
+					<button
+						type="button"
+						class="custom-select-button"
+						id="timezoneSelectButton"
+					>
+						东八区 (GMT+8)
+					</button>
+					<div class="custom-select-list" id="timezoneSelectList">
+						<div class="custom-select-item selected" data-value="8">
+							东八区 (GMT+8)
+						</div>
+						<div class="custom-select-item" data-value="0">零时区 (GMT+0)</div>
+						<div class="custom-select-item" data-value="-5">
+							东部时间 (GMT-5)
+						</div>
+						<div class="custom-select-item" data-value="-8">
+							太平洋时间 (GMT-8)
+						</div>
+						<div class="custom-select-item" data-value="1">
+							中欧时间 (GMT+1)
+						</div>
+						<div class="custom-select-item" data-value="9">
+							日本时间 (GMT+9)
+						</div>
+					</div>
+				</div>
+				<input type="hidden" id="timezoneSelect" value="8" />
+			</div>
+
+			<div class="form-group">
+				<label for="timeFormat">时间格式</label>
+				<div class="custom-select" id="timeFormatSelect">
+					<button
+						type="button"
+						class="custom-select-button"
+						id="timeFormatButton"
+					>
+						24小时制
+					</button>
+					<div class="custom-select-list" id="timeFormatList">
+						<div class="custom-select-item selected" data-value="24">
+							24小时制
+						</div>
+						<div class="custom-select-item" data-value="12">12小时制</div>
+					</div>
+				</div>
+				<input type="hidden" id="timeFormat" value="24" />
+			</div>
+
+			<div class="form-group">
+				<label>显示选项</label>
+				<div class="checkbox-group">
+					<input type="checkbox" id="showDate" checked />
+					<label for="showDate">显示日期</label>
+				</div>
+				<div class="checkbox-group">
+					<input type="checkbox" id="showDay" checked />
+					<label for="showDay">显示星期</label>
+				</div>
+				<div class="checkbox-group">
+					<input type="checkbox" id="showTimezone" checked />
+					<label for="showTimezone">显示时区</label>
+				</div>
+				<div class="checkbox-group">
+					<input type="checkbox" id="showSeconds" checked />
+					<label for="showSeconds">显示秒</label>
+				</div>
+			</div>
+
+			<button class="save-btn" id="saveBtn">保存设置</button>
+			<button class="reset-btn" id="resetBtn">重置设置</button>
+		</div>
+
+		<script>
+			// 完全重写设置面板逻辑
+			document.addEventListener("DOMContentLoaded", function () {
+				// 自定义列表选择器初始化函数
+				function initCustomSelect(buttonId, listId, hiddenInputId) {
+					const button = document.getElementById(buttonId);
+					const list = document.getElementById(listId);
+					const hiddenInput = document.getElementById(hiddenInputId);
+
+					// 点击按钮切换列表显示
+					button.addEventListener("click", function (e) {
+						e.stopPropagation();
+						// 关闭其他所有列表
+						document.querySelectorAll(".custom-select-list").forEach((l) => {
+							if (l !== list) {
+								l.classList.remove("show");
+								l.parentElement
+									.querySelector(".custom-select-button")
+									.classList.remove("active");
+							}
+						});
+						// 切换当前列表
+						list.classList.toggle("show");
+						button.classList.toggle("active");
+					});
+
+					// 点击列表项选择
+					list.querySelectorAll(".custom-select-item").forEach((item) => {
+						item.addEventListener("click", function (e) {
+							e.stopPropagation();
+							const value = this.getAttribute("data-value");
+							const text = this.textContent;
+
+							// 更新隐藏输入框
+							hiddenInput.value = value;
+
+							// 更新按钮文本
+							button.textContent = text;
+
+							// 更新选中状态
+							list.querySelectorAll(".custom-select-item").forEach((i) => {
+								i.classList.remove("selected");
+							});
+							this.classList.add("selected");
+
+							// 关闭列表
+							list.classList.remove("show");
+							button.classList.remove("active");
+						});
+					});
+
+					// 点击外部关闭列表
+					document.addEventListener("click", function (e) {
+						if (!button.contains(e.target) && !list.contains(e.target)) {
+							list.classList.remove("show");
+							button.classList.remove("active");
+						}
+					});
+				}
+
+				// 初始化所有自定义选择器
+				initCustomSelect("dateFontButton", "dateFontList", "dateFont");
+				initCustomSelect("timeFontButton", "timeFontList", "timeFont");
+				initCustomSelect("dayFontButton", "dayFontList", "dayFont");
+				initCustomSelect(
+					"timezoneFontButton",
+					"timezoneFontList",
+					"timezoneFont"
+				);
+				initCustomSelect("ampmFontButton", "ampmFontList", "ampmFont");
+				initCustomSelect(
+					"timezoneSelectButton",
+					"timezoneSelectList",
+					"timezoneSelect"
+				);
+				initCustomSelect("timeFormatButton", "timeFormatList", "timeFormat");
+
+				// 更新自定义选择器显示值的辅助函数
+				function updateCustomSelectDisplay(buttonId, listId, value) {
+					const button = document.getElementById(buttonId);
+					const list = document.getElementById(listId);
+					const items = list.querySelectorAll(".custom-select-item");
+
+					items.forEach((item) => {
+						if (item.getAttribute("data-value") === value) {
+							button.textContent = item.textContent;
+							items.forEach((i) => i.classList.remove("selected"));
+							item.classList.add("selected");
+						}
+					});
+				}
+
+				// 获取元素
+				const settingsBtn = document.getElementById("settingsBtn");
+				const settingsPanel = document.getElementById("settingsPanel");
+				const modalBackdrop = document.getElementById("modalBackdrop");
+				const saveBtn = document.getElementById("saveBtn");
+				const resetBtn = document.getElementById("resetBtn");
+				const body = document.body;
+
+				// 设置按钮显示/隐藏控制
+				let hideSettingsBtnTimeout;
+				let isSettingsPanelOpen = false;
+
+				// 显示设置按钮
+				function showSettingsBtn() {
+					clearTimeout(hideSettingsBtnTimeout);
+					body.classList.add("show-settings-btn");
+				}
+
+				// 隐藏设置按钮
+				function hideSettingsBtn() {
+					if (isSettingsPanelOpen) return;
+
+					hideSettingsBtnTimeout = setTimeout(() => {
+						body.classList.remove("show-settings-btn");
+					}, 2000);
+				}
+
+				// 打开设置面板
+				function openSettingsPanel() {
+					settingsPanel.style.display = "block";
+					modalBackdrop.style.display = "block";
+					isSettingsPanelOpen = true;
+					showSettingsBtn();
+
+					// 加载当前设置到表单
+					loadSettingsToForm();
+				}
+
+				// 关闭设置面板
+				function closeSettingsPanel() {
+					settingsPanel.style.display = "none";
+					modalBackdrop.style.display = "none";
+					isSettingsPanelOpen = false;
+					hideSettingsBtn();
+				}
+
+				// 重置设置为默认值
+				function resetSettings() {
+					// 默认颜色值
+					const defaultDateColor = "#ffffff";
+					const defaultTimeGradientStart = "#ffffff";
+					const defaultTimeGradientEnd = "#eeeeee";
+					const defaultDayColor = "#ffffff";
+					const defaultTimezoneColor = "#ffffff";
+					const defaultAmpmColor = "#ffffff";
+
+					// 默认字体大小
+					const defaultDateSize = "40";
+					const defaultTimeSize = "120";
+					const defaultDaySize = "32";
+					const defaultTimezoneSize = "28";
+					const defaultAmpmSize = "32";
+
+					// 默认字体
+					const defaultFont = "'Segoe UI', 'Microsoft YaHei', sans-serif";
+
+					// 默认加粗设置
+					const defaultBold = true;
+
+					// 默认时区和时间格式
+					const defaultTimezone = "8";
+					const defaultTimeFormat = "24";
+
+					// 默认显示选项
+					const defaultShowDate = true;
+					const defaultShowDay = true;
+					const defaultShowTimezone = true;
+					const defaultShowSeconds = true;
+
+					// 设置表单值
+					document.getElementById("dateColor").value = defaultDateColor;
+					document.getElementById("dateColorText").value = defaultDateColor;
+					document.getElementById("timeGradientStart").value =
+						defaultTimeGradientStart;
+					document.getElementById("timeGradientStartText").value =
+						defaultTimeGradientStart;
+					document.getElementById("timeGradientEnd").value =
+						defaultTimeGradientEnd;
+					document.getElementById("timeGradientEndText").value =
+						defaultTimeGradientEnd;
+					document.getElementById("dayColor").value = defaultDayColor;
+					document.getElementById("dayColorText").value = defaultDayColor;
+					document.getElementById("timezoneColor").value = defaultTimezoneColor;
+					document.getElementById("timezoneColorText").value =
+						defaultTimezoneColor;
+					document.getElementById("ampmColor").value = defaultAmpmColor;
+					document.getElementById("ampmColorText").value = defaultAmpmColor;
+
+					document.getElementById("dateSize").value = defaultDateSize;
+					document.getElementById("timeSize").value = defaultTimeSize;
+					document.getElementById("daySize").value = defaultDaySize;
+					document.getElementById("timezoneSize").value = defaultTimezoneSize;
+					document.getElementById("ampmSize").value = defaultAmpmSize;
+
+					document.getElementById("dateFont").value = defaultFont;
+					document.getElementById("timeFont").value = defaultFont;
+					document.getElementById("dayFont").value = defaultFont;
+					document.getElementById("timezoneFont").value = defaultFont;
+					document.getElementById("ampmFont").value = defaultFont;
+
+					// 更新自定义选择器显示
+					updateCustomSelectDisplay(
+						"dateFontButton",
+						"dateFontList",
+						defaultFont
+					);
+					updateCustomSelectDisplay(
+						"timeFontButton",
+						"timeFontList",
+						defaultFont
+					);
+					updateCustomSelectDisplay(
+						"dayFontButton",
+						"dayFontList",
+						defaultFont
+					);
+					updateCustomSelectDisplay(
+						"timezoneFontButton",
+						"timezoneFontList",
+						defaultFont
+					);
+					updateCustomSelectDisplay(
+						"ampmFontButton",
+						"ampmFontList",
+						defaultFont
+					);
+
+					document.getElementById("dateBold").checked = defaultBold;
+					document.getElementById("timeBold").checked = defaultBold;
+					document.getElementById("dayBold").checked = defaultBold;
+					document.getElementById("timezoneBold").checked = defaultBold;
+					document.getElementById("ampmBold").checked = defaultBold;
+
+					document.getElementById("timezoneSelect").value = defaultTimezone;
+					document.getElementById("timeFormat").value = defaultTimeFormat;
+
+					// 更新时区和时间格式选择器显示
+					updateCustomSelectDisplay(
+						"timezoneSelectButton",
+						"timezoneSelectList",
+						defaultTimezone
+					);
+					updateCustomSelectDisplay(
+						"timeFormatButton",
+						"timeFormatList",
+						defaultTimeFormat
+					);
+					document.getElementById("showDate").checked = defaultShowDate;
+					document.getElementById("showDay").checked = defaultShowDay;
+					document.getElementById("showTimezone").checked = defaultShowTimezone;
+					document.getElementById("showSeconds").checked = defaultShowSeconds;
+
+					// 保存默认设置
+					saveSettings();
+				}
+
+				// 保存设置
+				function saveSettings() {
+					// 获取表单值
+					const dateColor = document.getElementById("dateColor").value;
+					const timeGradientStart =
+						document.getElementById("timeGradientStart").value;
+					const timeGradientEnd =
+						document.getElementById("timeGradientEnd").value;
+					const dayColor = document.getElementById("dayColor").value;
+					const timezoneColor = document.getElementById("timezoneColor").value;
+					const ampmColor = document.getElementById("ampmColor").value;
+
+					const dateSize = document.getElementById("dateSize").value;
+					const timeSize = document.getElementById("timeSize").value;
+					const daySize = document.getElementById("daySize").value;
+					const timezoneSize = document.getElementById("timezoneSize").value;
+					const ampmSize = document.getElementById("ampmSize").value;
+
+					const dateFont = document.getElementById("dateFont").value;
+					const timeFont = document.getElementById("timeFont").value;
+					const dayFont = document.getElementById("dayFont").value;
+					const timezoneFont = document.getElementById("timezoneFont").value;
+					const ampmFont = document.getElementById("ampmFont").value;
+
+					const dateBold = document.getElementById("dateBold").checked;
+					const timeBold = document.getElementById("timeBold").checked;
+					const dayBold = document.getElementById("dayBold").checked;
+					const timezoneBold = document.getElementById("timezoneBold").checked;
+					const ampmBold = document.getElementById("ampmBold").checked;
+
+					const timezone = document.getElementById("timezoneSelect").value;
+					const timeFormat = document.getElementById("timeFormat").value;
+					const showDate = document.getElementById("showDate").checked;
+					const showDay = document.getElementById("showDay").checked;
+					const showTimezone = document.getElementById("showTimezone").checked;
+					const showSeconds = document.getElementById("showSeconds").checked;
+
+					// 保存到localStorage
+					localStorage.setItem("dateColor", dateColor);
+					localStorage.setItem("timeGradientStart", timeGradientStart);
+					localStorage.setItem("timeGradientEnd", timeGradientEnd);
+					localStorage.setItem("dayColor", dayColor);
+					localStorage.setItem("timezoneColor", timezoneColor);
+					localStorage.setItem("ampmColor", ampmColor);
+
+					localStorage.setItem("dateSize", dateSize);
+					localStorage.setItem("timeSize", timeSize);
+					localStorage.setItem("daySize", daySize);
+					localStorage.setItem("timezoneSize", timezoneSize);
+					localStorage.setItem("ampmSize", ampmSize);
+
+					localStorage.setItem("dateFont", dateFont);
+					localStorage.setItem("timeFont", timeFont);
+					localStorage.setItem("dayFont", dayFont);
+					localStorage.setItem("timezoneFont", timezoneFont);
+					localStorage.setItem("ampmFont", ampmFont);
+
+					localStorage.setItem("dateBold", dateBold);
+					localStorage.setItem("timeBold", timeBold);
+					localStorage.setItem("dayBold", dayBold);
+					localStorage.setItem("timezoneBold", timezoneBold);
+					localStorage.setItem("ampmBold", ampmBold);
+
+					localStorage.setItem("timezone", timezone);
+					localStorage.setItem("timeFormat", timeFormat);
+					localStorage.setItem("showDate", showDate);
+					localStorage.setItem("showDay", showDay);
+					localStorage.setItem("showTimezone", showTimezone);
+					localStorage.setItem("showSeconds", showSeconds);
+
+					// 应用设置
+					applySettings();
+
+					// 关闭设置面板
+					closeSettingsPanel();
+				}
+
+				// 加载设置到表单
+				function loadSettingsToForm() {
+					const savedDateColor = localStorage.getItem("dateColor") || "#ffffff";
+					const savedTimeGradientStart =
+						localStorage.getItem("timeGradientStart") || "#ffffff";
+					const savedTimeGradientEnd =
+						localStorage.getItem("timeGradientEnd") || "#eeeeee";
+					const savedDayColor = localStorage.getItem("dayColor") || "#ffffff";
+					const savedTimezoneColor =
+						localStorage.getItem("timezoneColor") || "#ffffff";
+					const savedAmpmColor = localStorage.getItem("ampmColor") || "#ffffff";
+
+					const savedDateSize = localStorage.getItem("dateSize") || "40";
+					const savedTimeSize = localStorage.getItem("timeSize") || "120";
+					const savedDaySize = localStorage.getItem("daySize") || "32";
+					const savedTimezoneSize =
+						localStorage.getItem("timezoneSize") || "28";
+					const savedAmpmSize = localStorage.getItem("ampmSize") || "32";
+
+					const savedDateFont =
+						localStorage.getItem("dateFont") ||
+						"'Segoe UI', 'Microsoft YaHei', sans-serif";
+					const savedTimeFont =
+						localStorage.getItem("timeFont") ||
+						"'Segoe UI', 'Microsoft YaHei', sans-serif";
+					const savedDayFont =
+						localStorage.getItem("dayFont") ||
+						"'Segoe UI', 'Microsoft YaHei', sans-serif";
+					const savedTimezoneFont =
+						localStorage.getItem("timezoneFont") ||
+						"'Segoe UI', 'Microsoft YaHei', sans-serif";
+					const savedAmpmFont =
+						localStorage.getItem("ampmFont") ||
+						"'Segoe UI', 'Microsoft YaHei', sans-serif";
+
+					const savedDateBold = localStorage.getItem("dateBold") !== "false";
+					const savedTimeBold = localStorage.getItem("timeBold") !== "false";
+					const savedDayBold = localStorage.getItem("dayBold") !== "false";
+					const savedTimezoneBold =
+						localStorage.getItem("timezoneBold") !== "false";
+					const savedAmpmBold = localStorage.getItem("ampmBold") !== "false";
+
+					const savedTimezone = localStorage.getItem("timezone") || "8";
+					const savedTimeFormat = localStorage.getItem("timeFormat") || "24";
+					const savedShowDate = localStorage.getItem("showDate") !== "false";
+					const savedShowDay = localStorage.getItem("showDay") !== "false";
+					const savedShowTimezone =
+						localStorage.getItem("showTimezone") !== "false";
+					const savedShowSeconds =
+						localStorage.getItem("showSeconds") !== "false";
+
+					// 设置表单值
+					document.getElementById("dateColor").value = savedDateColor;
+					document.getElementById("dateColorText").value = savedDateColor;
+					document.getElementById("timeGradientStart").value =
+						savedTimeGradientStart;
+					document.getElementById("timeGradientStartText").value =
+						savedTimeGradientStart;
+					document.getElementById("timeGradientEnd").value =
+						savedTimeGradientEnd;
+					document.getElementById("timeGradientEndText").value =
+						savedTimeGradientEnd;
+					document.getElementById("dayColor").value = savedDayColor;
+					document.getElementById("dayColorText").value = savedDayColor;
+					document.getElementById("timezoneColor").value = savedTimezoneColor;
+					document.getElementById("timezoneColorText").value =
+						savedTimezoneColor;
+					document.getElementById("ampmColor").value = savedAmpmColor;
+					document.getElementById("ampmColorText").value = savedAmpmColor;
+
+					document.getElementById("dateSize").value = savedDateSize;
+					document.getElementById("timeSize").value = savedTimeSize;
+					document.getElementById("daySize").value = savedDaySize;
+					document.getElementById("timezoneSize").value = savedTimezoneSize;
+					document.getElementById("ampmSize").value = savedAmpmSize;
+
+					document.getElementById("dateFont").value = savedDateFont;
+					document.getElementById("timeFont").value = savedTimeFont;
+					document.getElementById("dayFont").value = savedDayFont;
+					document.getElementById("timezoneFont").value = savedTimezoneFont;
+					document.getElementById("ampmFont").value = savedAmpmFont;
+
+					document.getElementById("dateBold").checked = savedDateBold;
+					document.getElementById("timeBold").checked = savedTimeBold;
+					document.getElementById("dayBold").checked = savedDayBold;
+					document.getElementById("timezoneBold").checked = savedTimezoneBold;
+					document.getElementById("ampmBold").checked = savedAmpmBold;
+
+					document.getElementById("timezoneSelect").value = savedTimezone;
+					document.getElementById("timeFormat").value = savedTimeFormat;
+					document.getElementById("showDate").checked = savedShowDate;
+					document.getElementById("showDay").checked = savedShowDay;
+					document.getElementById("showTimezone").checked = savedShowTimezone;
+					document.getElementById("showSeconds").checked = savedShowSeconds;
+				}
+
+				// 应用设置到界面
+				function applySettings() {
+					const dateColor = localStorage.getItem("dateColor") || "#ffffff";
+					const timeGradientStart =
+						localStorage.getItem("timeGradientStart") || "#ffffff";
+					const timeGradientEnd =
+						localStorage.getItem("timeGradientEnd") || "#eeeeee";
+					const dayColor = localStorage.getItem("dayColor") || "#ffffff";
+					const timezoneColor =
+						localStorage.getItem("timezoneColor") || "#ffffff";
+					const ampmColor = localStorage.getItem("ampmColor") || "#ffffff";
+
+					const dateSize = localStorage.getItem("dateSize") || "40";
+					const timeSize = localStorage.getItem("timeSize") || "120";
+					const daySize = localStorage.getItem("daySize") || "32";
+					const timezoneSize = localStorage.getItem("timezoneSize") || "28";
+					const ampmSize = localStorage.getItem("ampmSize") || "32";
+
+					const dateFont =
+						localStorage.getItem("dateFont") ||
+						"'Segoe UI', 'Microsoft YaHei', sans-serif";
+					const timeFont =
+						localStorage.getItem("timeFont") ||
+						"'Segoe UI', 'Microsoft YaHei', sans-serif";
+					const dayFont =
+						localStorage.getItem("dayFont") ||
+						"'Segoe UI', 'Microsoft YaHei', sans-serif";
+					const timezoneFont =
+						localStorage.getItem("timezoneFont") ||
+						"'Segoe UI', 'Microsoft YaHei', sans-serif";
+					const ampmFont =
+						localStorage.getItem("ampmFont") ||
+						"'Segoe UI', 'Microsoft YaHei', sans-serif";
+
+					const dateBold = localStorage.getItem("dateBold") !== "false";
+					const timeBold = localStorage.getItem("timeBold") !== "false";
+					const dayBold = localStorage.getItem("dayBold") !== "false";
+					const timezoneBold = localStorage.getItem("timezoneBold") !== "false";
+					const ampmBold = localStorage.getItem("ampmBold") !== "false";
+
+					const timezone = localStorage.getItem("timezone") || "8";
+					const timeFormat = localStorage.getItem("timeFormat") || "24";
+					const showDate = localStorage.getItem("showDate") !== "false";
+					const showDay = localStorage.getItem("showDay") !== "false";
+					const showTimezone = localStorage.getItem("showTimezone") !== "false";
+					const showSeconds = localStorage.getItem("showSeconds") !== "false";
+
+					// 应用颜色设置
+					document.getElementById("dateDisplay").style.color = dateColor;
+					document.getElementById("dayDisplay").style.color = dayColor;
+					document.getElementById("timezone").style.color = timezoneColor;
+					document.getElementById("ampmDisplay").style.color = ampmColor;
+
+					// 应用时间渐变
+					const timeDisplay = document.getElementById("timeDisplay");
+					timeDisplay.style.background = `linear-gradient(to right, ${timeGradientStart}, ${timeGradientEnd})`;
+					timeDisplay.style.webkitBackgroundClip = "text";
+					timeDisplay.style.backgroundClip = "text";
+					timeDisplay.style.color = "transparent";
+
+					// 应用字体大小设置
+					document.getElementById(
+						"dateDisplay"
+					).style.fontSize = `${dateSize}px`;
+					document.getElementById(
+						"timeDisplay"
+					).style.fontSize = `${timeSize}px`;
+					document.getElementById("dayDisplay").style.fontSize = `${daySize}px`;
+					document.getElementById(
+						"timezone"
+					).style.fontSize = `${timezoneSize}px`;
+					document.getElementById(
+						"ampmDisplay"
+					).style.fontSize = `${ampmSize}px`;
+
+					// 应用字体设置
+					document.getElementById("dateDisplay").style.fontFamily = dateFont;
+					document.getElementById("timeDisplay").style.fontFamily = timeFont;
+					document.getElementById("dayDisplay").style.fontFamily = dayFont;
+					document.getElementById("timezone").style.fontFamily = timezoneFont;
+					document.getElementById("ampmDisplay").style.fontFamily = ampmFont;
+
+					// 应用加粗设置
+					document.getElementById("dateDisplay").style.fontWeight = dateBold
+						? "bold"
+						: "normal";
+					document.getElementById("timeDisplay").style.fontWeight = timeBold
+						? "bold"
+						: "normal";
+					document.getElementById("dayDisplay").style.fontWeight = dayBold
+						? "bold"
+						: "normal";
+					document.getElementById("timezone").style.fontWeight = timezoneBold
+						? "bold"
+						: "normal";
+					document.getElementById("ampmDisplay").style.fontWeight = ampmBold
+						? "bold"
+						: "normal";
+
+					// 应用显示选项
+					document.getElementById("dateDisplay").style.display = showDate
+						? "block"
+						: "none";
+					document.getElementById("dayDisplay").style.display = showDay
+						? "block"
+						: "none";
+					document.getElementById("timezone").style.display = showTimezone
+						? "block"
+						: "none";
+
+					// 更新时区和时间格式
+					updateClock();
+				}
+
+				// 事件监听
+				settingsBtn.addEventListener("click", openSettingsPanel);
+				modalBackdrop.addEventListener("click", closeSettingsPanel);
+				saveBtn.addEventListener("click", saveSettings);
+				resetBtn.addEventListener("click", resetSettings);
+
+				// 颜色输入同步
+				function syncColorInputs(colorInput, textInput) {
+					colorInput.addEventListener("input", function () {
+						textInput.value = this.value;
+					});
+
+					textInput.addEventListener("input", function () {
+						if (/^#[0-9A-F]{6}$/i.test(this.value)) {
+							colorInput.value = this.value;
+						}
+					});
+				}
+
+				// 同步所有颜色输入
+				syncColorInputs(
+					document.getElementById("dateColor"),
+					document.getElementById("dateColorText")
+				);
+				syncColorInputs(
+					document.getElementById("timeGradientStart"),
+					document.getElementById("timeGradientStartText")
+				);
+				syncColorInputs(
+					document.getElementById("timeGradientEnd"),
+					document.getElementById("timeGradientEndText")
+				);
+				syncColorInputs(
+					document.getElementById("dayColor"),
+					document.getElementById("dayColorText")
+				);
+				syncColorInputs(
+					document.getElementById("timezoneColor"),
+					document.getElementById("timezoneColorText")
+				);
+				syncColorInputs(
+					document.getElementById("ampmColor"),
+					document.getElementById("ampmColorText")
+				);
+
+				// 鼠标移动时显示设置按钮
+				body.addEventListener("mousemove", function () {
+					showSettingsBtn();
+					hideSettingsBtn();
+				});
+
+				// 时钟功能
+				const timeDisplay = document.getElementById("timeDisplay");
+				const ampmDisplay = document.getElementById("ampmDisplay");
+				const dateDisplay = document.getElementById("dateDisplay");
+				const dayDisplay = document.getElementById("dayDisplay");
+				const timezoneDisplay = document.getElementById("timezone");
+
+				// 中文星期数组
+				const weekdays = [
+					"星期日",
+					"星期一",
+					"星期二",
+					"星期三",
+					"星期四",
+					"星期五",
+					"星期六",
+				];
+
+				// 月份名称
+				const months = [
+					"1月",
+					"2月",
+					"3月",
+					"4月",
+					"5月",
+					"6月",
+					"7月",
+					"8月",
+					"9月",
+					"10月",
+					"11月",
+					"12月",
+				];
+
+				function updateClock() {
+					const now = new Date();
+
+					// 获取时区设置
+					const timezone = parseInt(localStorage.getItem("timezone") || "8");
+
+					// 应用时区偏移
+					const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+					const adjustedDate = new Date(utc + 3600000 * timezone);
+
+					// 更新日期
+					const year = adjustedDate.getFullYear();
+					const month = months[adjustedDate.getMonth()];
+					const day = adjustedDate.getDate();
+					dateDisplay.textContent = `${year}年${month}${day}日`;
+
+					// 更新星期
+					const dayOfWeek = weekdays[adjustedDate.getDay()];
+					dayDisplay.textContent = dayOfWeek;
+
+					// 更新时间
+					const timeFormat = localStorage.getItem("timeFormat") || "24";
+					const showSeconds = localStorage.getItem("showSeconds") !== "false";
+					let hours = adjustedDate.getHours();
+					const minutes = adjustedDate.getMinutes();
+					const seconds = adjustedDate.getSeconds();
+
+					let timeString;
+					let ampm = "";
+
+					if (timeFormat === "24") {
+						if (showSeconds) {
+							timeString = `${padZero(hours)}:${padZero(minutes)}:${padZero(
+								seconds
+							)}`;
+						} else {
+							timeString = `${padZero(hours)}:${padZero(minutes)}`;
+						}
+						ampmDisplay.textContent = "";
+					} else {
+						const ampmText = hours >= 12 ? "pm." : "am."; // 添加点
+						hours = hours % 12 || 12;
+
+						if (showSeconds) {
+							timeString = `${padZero(hours)}:${padZero(minutes)}:${padZero(
+								seconds
+							)}`;
+						} else {
+							timeString = `${padZero(hours)}:${padZero(minutes)}`;
+						}
+						ampm = ampmText;
+						ampmDisplay.textContent = ampm;
+					}
+
+					timeDisplay.textContent = timeString;
+
+					// 更新时区显示
+					const timezoneSign = timezone >= 0 ? "+" : "";
+					timezoneDisplay.textContent = `时区: GMT${timezoneSign}${timezone}`;
+				}
+
+				function padZero(num) {
+					return num.toString().padStart(2, "0");
+				}
+
+				// 初始化设置
+				window.addEventListener("load", function () {
+					applySettings();
+				});
+
+				// 每秒更新时间
+				setInterval(updateClock, 1000);
+				updateClock(); // 初始更新
+			});
+		</script>
+	</body>
+</html>

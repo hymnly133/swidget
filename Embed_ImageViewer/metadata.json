@@ -1,0 +1,29 @@
+{
+	"author": "Sionspota",
+	"authorEmail": "sionspota@163.com",
+	"authorWebsite": "sapphire.icu",
+	"customFields": {},
+	"defaultGridSize": {
+		"cols": 2,
+		"rows": 2
+	},
+	"defaultShowBackground": false,
+	"description": "",
+	"displayName": "图片轮播",
+	"functions": [],
+	"manualFileName": "",
+	"minimumAppVersion": "",
+	"mouseEventMode": 0,
+	"name": "Embed_ImageViewer",
+	"permissions": [],
+	"previewImageFileName": "",
+	"supportTypes": {
+		"supportsFile": false,
+		"supportsImage": false,
+		"supportsVideo": false
+	},
+	"tags": [],
+	"version": "1.0.0",
+	"widgetFileName": "Embed_ImageViewer.qml",
+	"widgetType": "Qml"
+}

@@ -1,0 +1,33 @@
+{
+    "author": "",
+    "authorEmail": "",
+    "authorWebsite": "",
+    "customFields": {
+    },
+    "defaultGridSize": {
+        "cols": 2,
+        "rows": 3
+    },
+    "defaultShowBackground": true,
+    "description": "",
+    "displayName": "simple_text",
+    "functions": [
+    ],
+    "manualFileName": "",
+    "minimumAppVersion": "",
+    "mouseEventMode": 2,
+    "name": "simple_text",
+    "permissions": [
+    ],
+    "previewImageFileName": "",
+    "supportTypes": {
+        "supportsFile": false,
+        "supportsImage": false,
+        "supportsVideo": false
+    },
+    "tags": [
+    ],
+    "version": "1.0.0",
+    "widgetFileName": "simple_text.qml",
+    "widgetType": "Qml"
+}

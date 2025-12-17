@@ -1,0 +1,34 @@
+{
+    "author": "Sionspota",
+    "authorEmail": "sionspota@163.com",
+    "authorWebsite": "sapphire.icu",
+    "customFields": {
+    },
+    "defaultGridSize": {
+        "cols": 1,
+        "rows": 4
+    },
+    "defaultShowBackground": false,
+    "defaultShowSide": false,
+    "description": "在精简模式下自动隐藏文字，双击打开对应文件",
+    "displayName": "动态图标",
+    "functions": [
+    ],
+    "manualFileName": "",
+    "minimumAppVersion": "",
+    "mouseEventMode": 2,
+    "name": "Embed_DynamicIcon",
+    "permissions": [
+    ],
+    "previewImageFileName": "",
+    "supportTypes": {
+        "supportsFile": true,
+        "supportsImage": false,
+        "supportsVideo": false
+    },
+    "tags": [
+    ],
+    "version": "1.0.0",
+    "widgetFileName": "beautiful_card.qml",
+    "widgetType": "Qml"
+}

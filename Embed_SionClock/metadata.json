@@ -1,0 +1,34 @@
+{
+    "author": "Sionspota",
+    "authorEmail": "sionspota@163.com",
+    "authorWebsite": "sapphire.icu",
+    "customFields": {
+    },
+    "defaultGridSize": {
+        "cols": 3,
+        "rows": 5
+    },
+    "defaultShowBackground": true,
+    "defaultShowSide": true,
+    "description": "",
+    "displayName": "Sion的时钟",
+    "functions": [
+    ],
+    "manualFileName": "",
+    "minimumAppVersion": "",
+    "mouseEventMode": 2,
+    "name": "Embed_SionClock",
+    "permissions": [
+    ],
+    "previewImageFileName": "",
+    "supportTypes": {
+        "supportsFile": false,
+        "supportsImage": false,
+        "supportsVideo": false
+    },
+    "tags": [
+    ],
+    "version": "1.0.0",
+    "widgetFileName": "Embed_SionClock.html",
+    "widgetType": "Html"
+}

@@ -1,0 +1,28 @@
+{
+	"author": "",
+	"authorEmail": "",
+	"authorWebsite": "",
+	"customFields": {},
+	"defaultGridSize": {
+		"cols": 2,
+		"rows": 3
+	},
+	"description": "",
+	"displayName": "beautiful_card_html",
+	"functions": [],
+	"manualFileName": "",
+	"minimumAppVersion": "",
+	"mouseEventMode": 2,
+	"name": "beautiful_card_html",
+	"permissions": [],
+	"previewImageFileName": "",
+	"supportTypes": {
+		"supportsFile": true,
+		"supportsImage": false,
+		"supportsVideo": false
+	},
+	"tags": [],
+	"version": "1.0.0",
+	"widgetFileName": "beautiful_card.html",
+	"widgetType": "Html"
+}

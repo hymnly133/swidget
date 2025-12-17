@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Beautiful Card</title>
+		<script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+		<style>
+			/* 渐变停止点动画 */
+			@keyframes gradientStopAnimation {
+				0% {
+					--gradient-stop: 10%;
+				}
+				100% {
+					--gradient-stop: 50%;
+				}
+			}
+
+			@keyframes gradientStopAnimationReverse {
+				0% {
+					--gradient-stop: 50%;
+				}
+				100% {
+					--gradient-stop: 10%;
+				}
+			}
+
+			:root {
+				--theme-color: #007acc;
+				--file-color: #ffffff;
+				--unit-round-corner: 16px;
+			}
+
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+				user-select: none;
+				-webkit-user-drag: none;
+			}
+
+			body {
+				width: 100vw;
+				height: 100vh;
+				overflow: hidden;
+				background: transparent;
+				font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+				display: flex;
+				align-items: center;
+				justify-content: flex-start; /* 左对齐 */
+			}
+
+			/* 主卡片容器 */
+			.card {
+				position: relative;
+				display: flex;
+				align-items: center;
+				justify-content: center; /* 横向居中 */
+
+				left: 0%;
+				height: 100%; /* 留一点边距 */
+				width: 100%;
+				/* padding: 6px; */
+
+				border-radius: var(--unit-round-corner);
+
+				/* 玻璃拟态背景 */
+				/* background: var(--mixed-bg); */
+				/* backdrop-filter: blur(12px); */
+				/* -webkit-backdrop-filter: blur(12px); */
+
+				border: 2px solid rgba(255, 255, 255, 0.2);
+				/* box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); */
+
+				/* 渐变背景使用 CSS 变量，支持动画插值 */
+				--gradient-color1: rgba(0, 122, 204, 0.4);
+				--gradient-color2: rgba(0, 122, 204, 0.1);
+				--gradient-stop: 10%;
+				/* Icon 背景相关变量 */
+				--icon-bg-url: none;
+				--icon-bg-opacity: 0;
+
+				background: linear-gradient(
+					135deg,
+					var(--gradient-color1) 0%,
+					var(--gradient-color1) var(--gradient-stop),
+					var(--gradient-color2) 100%
+				);
+
+				transition: border-color 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+					--icon-bg-opacity 0.6s cubic-bezier(0.25, 0.8, 0.25, 1),
+					--gradient-stop 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+				cursor: pointer;
+				overflow: hidden;
+				&.focused {
+					--gradient-stop: 50%;
+					border-color: rgba(255, 255, 255, 0.4);
+				}
+				&:active {
+					--gradient-stop: 90%;
+					border-color: rgba(255, 255, 255, 0.147);
+				}
+			}
+
+			/* Icon 背景层 - 使用伪元素实现 */
+			.card::before {
+				content: "";
+				position: absolute;
+				top: 0;
+				left: 0;
+				right: 0;
+				bottom: 0;
+				border-radius: var(--unit-round-corner);
+				background-image: var(--icon-bg-url);
+				background-size: 40%;
+				background-position: center;
+				background-repeat: no-repeat;
+				opacity: var(--icon-bg-opacity);
+				pointer-events: none;
+				z-index: 1;
+				transition: opacity 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+			}
+
+			/* 图标容器 */
+			.icon-wrapper {
+				height: 60%;
+				aspect-ratio: 1;
+				flex-shrink: 0;
+				border-radius: var(--unit-round-corner);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				background: rgba(255, 255, 255, 0.15);
+				box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.1);
+				z-index: 2;
+				transition: transform 0.4s ease;
+				&:hover {
+					transform: scale(1.2);
+				}
+			}
+
+			.icon-img {
+				width: 80%;
+				height: 80%;
+				object-fit: contain;
+				filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+			}
+
+			/* 文本容器 - 默认隐藏状态 */
+			.info-wrapper {
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				padding-right: 10px;
+
+				/* 动画关键属性 - 使用 CSS 变量动态设置文本实际宽度 */
+				max-width: var(--info-wrapper-width, 0px);
+				opacity: 1;
+				margin-left: clamp(8px, 3%, 3%);
+				white-space: nowrap;
+				overflow: hidden; /* 保留 overflow: hidden 用于裁剪 */
+				position: relative; /* 为渐变遮罩定位 */
+
+				/* 使用 mask-image 创建右侧渐隐效果 */
+				/* 通过 CSS 变量精确控制渐隐起始位置，确保文本完全可见 */
+				--mask-fade-start: calc(
+					100% - var(--mask-fade-width, 20px)
+				); /* 渐隐起始位置 */
+				--mask-fade-width: 20px; /* 渐隐区域宽度 */
+				mask-image: linear-gradient(
+					to right,
+					black 0,
+					black var(--mask-fade-start),
+					transparent 100%
+				);
+				-webkit-mask-image: linear-gradient(
+					to right,
+					black 0,
+					black var(--mask-fade-start),
+					transparent 100%
+				);
+				mask-size: 100% 100%;
+				-webkit-mask-size: 100% 100%;
+				mask-repeat: no-repeat;
+				-webkit-mask-repeat: no-repeat;
+				mask-position: center;
+				-webkit-mask-position: center;
+
+				transition: max-width 0.5s cubic-bezier(0.19, 1, 0.22, 1),
+					opacity 0.5s cubic-bezier(0.19, 1, 0.22, 1),
+					margin-left 0.5s cubic-bezier(0.19, 1, 0.22, 1),
+					padding-right 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+			}
+
+			/* 简单模式且非聚焦状态 - 收起 */
+			.card.simple-mode:not(.focused) .info-wrapper {
+				max-width: 0px;
+				margin-left: 0%;
+				padding-right: 0px;
+				opacity: 0;
+			}
+
+			/* 文本样式 */
+			.file-name {
+				font-size: 30px;
+				font-weight: 600;
+				color: #ffffff;
+				text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+				letter-spacing: 0.8px;
+			}
+
+			/* 占位符图标 */
+			.placeholder {
+				font-size: 20px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="card" id="mainCard" onclick="openFile()">
+			<div class="icon-wrapper" id="iconWrapper">
+				<div class="placeholder">📄</div>
+			</div>
+
+			<div class="info-wrapper">
+				<div class="file-name" id="fileName">未选择文件</div>
+			</div>
+		</div>
+
+		<script>
+			let bridge = null;
+			let currentThemeColor = "#007ACC";
+			let currentFileColor = null; // {r, g, b, a}
+			let currentIconUrl = null; // 当前 icon 图片 URL
+			let isFocused = false;
+
+			CSS.registerProperty({
+				name: "--gradient-stop",
+				initialValue: "10%",
+				syntax: "<percentage>",
+				inherits: false,
+			});
+
+			// 初始化 WebChannel
+			new QWebChannel(qt.webChannelTransport, function (channel) {
+				bridge = channel.objects.bridge;
+
+				if (!bridge) {
+					console.error("Bridge not found");
+					return;
+				}
+
+				// 1. 连接信号
+				bridge.proxyFilePathChanged.connect(updateContent);
+				bridge.proxyFileRemoved.connect(onFileRemoved);
+				bridge.unitInfoChanged.connect(updateFocusState);
+
+				// 样式相关的信号 (假设 styleHelper 会触发重新加载或有信号，这里主要依赖 unitInfoChanged 触发重绘或主动轮询)
+				// 实际上主题色通常比较稳定，我们可以在初始化和每次更新时获取
+
+				// 2. 初始化数据
+				init();
+			});
+
+			async function init() {
+				// 获取初始主题色
+				try {
+					const color = await bridge.getThemeColor();
+					if (color) currentThemeColor = color;
+				} catch (e) {}
+
+				updateContent();
+				updateFocusState();
+				bridge.setGlobalRoundCornerEnabled(false);
+			}
+
+			// === 测量文本实际宽度 ===
+			function measureTextWidth() {
+				const fileName = document.getElementById("fileName");
+				const infoWrapper = document.querySelector(".info-wrapper");
+				const card = document.getElementById("mainCard");
+
+				if (!fileName || !infoWrapper || !card) return 0;
+
+				// 临时移除 max-width 限制和 overflow 隐藏以测量实际宽度
+				const originalMaxWidth = infoWrapper.style.maxWidth;
+				const originalOverflow = infoWrapper.style.overflow;
+				infoWrapper.style.maxWidth = "none";
+				infoWrapper.style.overflow = "visible";
+
+				// 强制重排以获取准确尺寸
+				void infoWrapper.offsetWidth;
+
+				// 测量文本容器的实际宽度（包括 padding 和 margin）
+				const textWidth = Math.ceil(
+					fileName.scrollWidth || fileName.offsetWidth
+				);
+
+				// 恢复原始样式
+				infoWrapper.style.maxWidth = originalMaxWidth;
+				infoWrapper.style.overflow = originalOverflow;
+
+				// 动态调整遮罩渐隐宽度：根据文本宽度自适应
+				// 文本宽度较小时，渐隐区域相应缩小，最小 8px，最大 20px
+				const fadeWidth = Math.min(20, Math.max(8, textWidth * 0.12));
+
+				// 设置 CSS 变量，用于动画
+				// 容器宽度 = 文本宽度 + 右侧边距 + 渐隐区域
+				// 确保文本完全可见：文本右边缘 + 边距后才开始渐隐
+				const rightMargin = 30; // 文本右侧边距，增加以确保文本和渐隐区域之间有足够空间
+				const finalWidth = textWidth + rightMargin + fadeWidth;
+				card.style.setProperty("--info-wrapper-width", `${finalWidth}px`);
+
+				// 精确计算渐隐起始位置（百分比），确保在文本右边缘之后
+				// 渐隐起始位置 = (文本宽度 + 边距) / 容器总宽度 * 100%
+				const fadeStartPercent = (
+					((textWidth + rightMargin) / finalWidth) *
+					100
+				).toFixed(2);
+				infoWrapper.style.setProperty(
+					"--mask-fade-start",
+					`${fadeStartPercent}%`
+				);
+
+				// 设置遮罩渐隐宽度
+				infoWrapper.style.setProperty("--mask-fade-width", `${fadeWidth}px`);
+
+				return finalWidth;
+			}
+
+			// === 核心逻辑：更新内容 ===
+			async function updateContent() {
+				if (!bridge) return;
+
+				const filePath = bridge.proxyFilePath;
+
+				// 1. 获取文件名
+				let name = "未选择文件";
+				if (filePath) {
+					try {
+						const n = await bridge.getProxyFileName(filePath);
+						if (n) name = n;
+					} catch (e) {
+						console.log("Get name failed", e);
+					}
+				}
+				document.getElementById("fileName").textContent = name;
+
+				// 测量并更新文本宽度（使用 requestAnimationFrame 确保 DOM 已更新）
+				requestAnimationFrame(() => {
+					measureTextWidth();
+				});
+
+				// 2. 获取图标
+				const iconWrapper = document.getElementById("iconWrapper");
+				if (filePath) {
+					try {
+						const iconData = await bridge.getProxyFileIcon(filePath);
+						if (iconData) {
+							currentIconUrl = iconData; // 保存 icon URL 用于背景
+							iconWrapper.innerHTML = `<img src="${iconData}" class="icon-img" onerror="this.style.display='none'">`;
+						} else {
+							currentIconUrl = null;
+							iconWrapper.innerHTML = `<div class="placeholder">📄</div>`;
+						}
+					} catch (e) {
+						currentIconUrl = null;
+						iconWrapper.innerHTML = `<div class="placeholder">📄</div>`;
+					}
+				} else {
+					currentIconUrl = null;
+					iconWrapper.innerHTML = `<div class="placeholder">➕</div>`;
+				}
+
+				// 3. 获取文件颜色并更新背景
+				if (filePath) {
+					try {
+						const colorJson = await bridge.getProxyFileColor(filePath);
+						if (colorJson) {
+							currentFileColor = JSON.parse(colorJson);
+						} else {
+							currentFileColor = null;
+						}
+					} catch (e) {
+						currentFileColor = null;
+					}
+				} else {
+					currentFileColor = null;
+				}
+
+				updateBackground();
+			}
+
+			// === 核心逻辑：更新 Icon 背景 ===
+			function updateIconBackground() {
+				const card = document.getElementById("mainCard");
+
+				// 更新 isFocused 状态
+				isFocused = bridge.unitInfo
+					? JSON.parse(bridge.unitInfo).isFocus
+					: false;
+
+				// 设置 icon 背景 URL
+				if (currentIconUrl) {
+					card.style.setProperty("--icon-bg-url", `url("${currentIconUrl}")`);
+					// 聚焦时显示淡淡的背景，非聚焦时隐藏
+					card.style.setProperty("--icon-bg-opacity", isFocused ? "0.05" : "0");
+				} else {
+					card.style.setProperty("--icon-bg-url", "none");
+					card.style.setProperty("--icon-bg-opacity", "0");
+				}
+			}
+
+			// === 核心逻辑：更新背景渐变 ===
+			function updateBackground() {
+				const card = document.getElementById("mainCard");
+
+				// 解析主题色 Hex -> RGB
+				const themeRgb = hexToRgb(currentThemeColor) || {
+					r: 0,
+					g: 122,
+					b: 204,
+				};
+
+				let color1, color2;
+
+				if (currentFileColor) {
+					// 如果有文件色，左侧使用文件色，右侧使用主题色混合
+					color1 = `rgba(${currentFileColor.r}, ${currentFileColor.g}, ${currentFileColor.b}, 0.6)`;
+					color2 = `rgba(${themeRgb.r}, ${themeRgb.g}, ${themeRgb.b}, 0.2)`;
+				} else {
+					// 默认状态
+					color1 = `rgba(${themeRgb.r}, ${themeRgb.g}, ${themeRgb.b}, 0.4)`;
+					color2 = `rgba(${themeRgb.r}, ${themeRgb.g}, ${themeRgb.b}, 0.1)`;
+				}
+
+				// 更新 CSS 变量，支持动画插值
+				// 使用 135deg 实现左上到右下的光感
+				isFocused = bridge.unitInfo
+					? JSON.parse(bridge.unitInfo).isFocus
+					: false;
+				console.log("unitInfo", bridge.unitInfo);
+
+				// 设置可插值的 CSS 变量
+				card.style.setProperty("--gradient-color1", color1);
+				card.style.setProperty("--gradient-color2", color2);
+
+				console.log(
+					"updateBackground",
+					`color1: ${color1}, color2: ${color2}, stop: ${
+						isFocused ? "30%" : "10%"
+					}`,
+					bridge.unitInfo ? JSON.parse(bridge.unitInfo).isFocus : false
+				);
+
+				// 动态边框颜色
+				if (currentFileColor) {
+					card.style.borderColor = `rgba(${currentFileColor.r}, ${currentFileColor.g}, ${currentFileColor.b}, 0.3)`;
+				}
+
+				// 更新 icon 背景
+				updateIconBackground();
+			}
+
+			// === 核心逻辑：焦点状态切换 ===
+			function updateFocusState() {
+				if (!bridge) return;
+				console.log("updateFocusState");
+
+				try {
+					// bridge.unitInfo 是 JSON 字符串
+					const infoStr = bridge.unitInfo; // 访问属性
+					if (!infoStr) return;
+
+					const info = JSON.parse(infoStr);
+					const focused = info.isFocus;
+					const simpleMode = info.simpleMode;
+
+					const card = document.getElementById("mainCard");
+					if (focused) {
+						card.classList.add("focused");
+						// 聚焦时重新获取一下主题色，确保是最新的
+						bridge.getThemeColor().then((c) => {
+							if (c && c !== currentThemeColor) {
+								currentThemeColor = c;
+								updateBackground();
+							}
+						});
+					} else {
+						card.classList.remove("focused");
+					}
+					if (simpleMode) {
+						card.classList.add("simple-mode");
+					} else {
+						card.classList.remove("simple-mode");
+					}
+				} catch (e) {
+					console.error("Parse unit info failed", e);
+				}
+				updateBackground(); // 这会同时更新渐变背景和 icon 背景
+			}
+
+			function onFileRemoved() {
+				currentFileColor = null;
+				updateContent();
+			}
+
+			function openFile() {
+				if (bridge) {
+					return;
+					// 简单的防抖或交互反馈
+					const card = document.getElementById("mainCard");
+					card.style.transform = "scale(0.95)";
+					setTimeout(() => (card.style.transform = ""), 150);
+
+					bridge.openProxyFile();
+				}
+			}
+
+			// 工具：Hex 转 RGB
+			function hexToRgb(hex) {
+				var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+				return result
+					? {
+							r: parseInt(result[1], 16),
+							g: parseInt(result[2], 16),
+							b: parseInt(result[3], 16),
+					  }
+					: null;
+			}
+		</script>
+	</body>
+</html>

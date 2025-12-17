@@ -1,0 +1,29 @@
+{
+	"author": "",
+	"authorEmail": "",
+	"authorWebsite": "",
+	"customFields": {},
+	"defaultGridSize": {
+		"cols": 3,
+		"rows": 3
+	},
+	"defaultShowBackground": true,
+	"description": "",
+	"displayName": "ethollwa‘s 待办",
+	"functions": [],
+	"manualFileName": "",
+	"minimumAppVersion": "",
+	"mouseEventMode": 2,
+	"name": "Embed_ethollwa_todo",
+	"permissions": [],
+	"previewImageFileName": "",
+	"supportTypes": {
+		"supportsFile": false,
+		"supportsImage": false,
+		"supportsVideo": false
+	},
+	"tags": [],
+	"version": "1.0.0",
+	"widgetFileName": "Embed_ethollwa_todo.html",
+	"widgetType": "Html"
+}
