@@ -1,10 +1,9 @@
 ﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtQuick.Controls.Basic
+//%IF_QT6 import QtQuick.Controls.Basic 2.15
 import QtQuick.Layouts 1.15
-import QtQuick.Dialogs
-import QtMultimedia 6.8
-import Qt5Compat.GraphicalEffects
+import QtQuick.Dialogs 1.3
+//%IF_QT6 import Qt5Compat.GraphicalEffects
 import "../common"
 
 /**
@@ -31,8 +30,14 @@ SWidget {
     property int persistentInt: 100
     property bool persistentBool: true
     property var persistentVar: "this is default value"
+    //%QT6_BEGIN
     property list<string> persistentStringList: ["item1", "item2", "item3"]
+    //%QT6_END
 
+
+    //%QT5_BEGIN
+    property var persistentStringList: ["item1", "item2", "item3"]
+    //%QT5_END
     property string persistentStringListText: "persistentStringList: " + persistentStringList.join(", ")
 
     Column {

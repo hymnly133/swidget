@@ -1,8 +1,8 @@
 ﻿import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
-import Qt5Compat.GraphicalEffects
-import QtWebEngine
+//%IF_QT6 import Qt5Compat.GraphicalEffects
+//%IF_QT5 import QtGraphicalEffects 1.15
 /**
  * Sapphire Version: 1.6.0.2
  * @brief SWidget - QML小组件标准化接口
@@ -241,7 +241,7 @@ Item {
         radius: swidget.unitRadius
     }
 
-
+//%QT6_BEGIN
     OpacityMask {
         visible : swidget.globalRoundCornerEnabled? true : false
         anchors.fill: parent
@@ -249,7 +249,17 @@ Item {
         maskSource: maskItem
         cached:true
     }
+//%QT6_END
 
+//%QT5_BEGIN
+    OpacityMask {
+        visible : swidget.globalRoundCornerEnabled? true : false
+        anchors.fill: parent
+        source: contentItem
+        maskSource: maskItem
+        cached:true
+    }
+//%QT5_END
     // ==================== FPS显示组件 ====================
     /**
      * @brief FPS计数器显示

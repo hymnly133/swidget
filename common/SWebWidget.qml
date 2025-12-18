@@ -1,8 +1,16 @@
 ﻿import QtQuick 2.15
-import QtQuick.Controls 2.15
+
+//%QT6_BEGIN
 import QtWebEngine
 import QtWebChannel
 import Qt5Compat.GraphicalEffects
+//%QT6_END
+
+//%QT5_BEGIN
+import QtWebEngine 1.10
+import QtWebChannel 1.10
+//%QT5_END
+
 // import "qrc:/resources/widgets/common" as Common
 
 /**
