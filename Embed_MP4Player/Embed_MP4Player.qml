@@ -1,11 +1,14 @@
-﻿import QtQuick 2.15
+import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtQuick.Controls.Basic
+//%IF_QT6 import QtQuick.Controls.Basic
 import QtQuick.Layouts 1.15
-import QtQuick.Dialogs
-import QtMultimedia 6.8
-import Qt5Compat.GraphicalEffects
-import "../common"
+//%IF_QT6 import QtQuick.Dialogs
+//%IF_QT5 import QtQuick.Dialogs 1.3
+//%IF_QT6 import QtMultimedia 6.8
+//%IF_QT5 import QtMultimedia 5.15
+//%IF_QT6 import Qt5Compat.GraphicalEffects
+//%IF_QT5 import QtGraphicalEffects 1.15
+import "@COMMON_IMPORT@"
 
 /**
  * @brief MP4视频播放QML组件
@@ -101,6 +104,7 @@ SWidget {
 
 
      // 文件对话框 - 支持多种视频格式
+    //%QT6_BEGIN
     FileDialog {
         id: videoFileDialog
         title: "选择视频文件"
@@ -127,6 +131,36 @@ SWidget {
             console.log("取消选择视频文件")
         }
     }
+    //%QT6_END
+    
+    //%QT5_BEGIN
+    FileDialog {
+        id: videoFileDialog
+        title: "选择视频文件"
+        nameFilters: [
+            "MP4视频文件 (*.mp4)",
+            "AVI视频文件 (*.avi)", 
+            "MOV视频文件 (*.mov)",
+            "WMV视频文件 (*.wmv)",
+            "所有视频文件 (*.mp4 *.avi *.mov *.wmv)"
+        ]
+
+        onAccepted: {
+            console.log("选择的视频文件:", fileUrl)
+            
+            var newVideoPath = fileUrl.toString()
+            console.log("选择的视频路径:", newVideoPath)
+            
+            // 设置视频路径
+            root.videoPath = newVideoPath
+            console.log("更新后的视频路径:", root.videoPath)
+            console.log("hasVideo状态:", root.hasVideo)
+        }
+        onRejected: {
+            console.log("取消选择视频文件")
+        }
+    }
+    //%QT5_END
    
     // 视频显示区域 - 铺满整个组件
     Rectangle {
@@ -178,19 +212,19 @@ SWidget {
                 mouse.accepted = false  // 不处理释放事件，让事件继续传播
             }
             
-            // 媒体播放器
+            //%QT6_BEGIN
+            // Qt6版本：MediaPlayer需要显式连接videoOutput和audioOutput
             MediaPlayer {
                 id: mediaPlayer
                 autoPlay: true
                 loops: MediaPlayer.Infinite
                 source: root.videoPath
                 videoOutput: videoPlayer
-                
+                audioOutput: AudioOutput {}  // Qt6需要显式设置音频输出
 
                 onSourceChanged: {
                     console.log("MediaPlayer源变化:", source)
                 }
-                
                 
                 // 播放状态变化
                 onPlaybackStateChanged: {
@@ -230,15 +264,13 @@ SWidget {
                 }
             }
             
-            // 视频输出
+            // Qt6版本：VideoOutput通过MediaPlayer的videoOutput属性连接
             VideoOutput {
                 id: videoPlayer
                 anchors.fill: parent
-                // anchors.margins: root.globalMargin
                 visible: root.hasVideo
                 fillMode: VideoOutput.PreserveAspectCrop
                 
-            
                 // 辅助函数：获取播放状态名称
                 function getPlaybackStateName(state) {
                     switch(state) {
@@ -249,6 +281,78 @@ SWidget {
                     }
                 }
             }
+            //%QT6_END
+            
+            //%QT5_BEGIN
+            // Qt5版本：MediaPlayer自动管理视频输出，不需要显式连接
+            MediaPlayer {
+                id: mediaPlayer
+                autoPlay: true
+                loops: MediaPlayer.Infinite
+                source: root.videoPath
+
+                onSourceChanged: {
+                    console.log("MediaPlayer源变化:", source)
+                }
+                
+                // 播放状态变化
+                onPlaybackStateChanged: {
+                    console.log("播放状态变化:", playbackState, "状态名称:", getPlaybackStateName(playbackState))
+                    if (playbackState === MediaPlayer.PlayingState) {
+                        console.log("视频开始播放")
+                    } else if (playbackState === MediaPlayer.PausedState) {
+                        console.log("视频暂停")
+                    } else if (playbackState === MediaPlayer.StoppedState) {
+                        console.log("视频停止")
+                    }
+                }
+                
+                // 辅助函数：获取状态名称
+                function getStatusName(status) {
+                    switch(status) {
+                        case MediaPlayer.NoMedia: return "NoMedia"
+                        case MediaPlayer.LoadingMedia: return "LoadingMedia"
+                        case MediaPlayer.LoadedMedia: return "LoadedMedia"
+                        case MediaPlayer.BufferingMedia: return "BufferingMedia"
+                        case MediaPlayer.BufferedMedia: return "BufferedMedia"
+                        case MediaPlayer.EndOfMedia: return "EndOfMedia"
+                        case MediaPlayer.InvalidMedia: return "InvalidMedia"
+                        case MediaPlayer.StalledMedia: return "StalledMedia"
+                        default: return "Unknown(" + status + ")"
+                    }
+                }
+                
+                // 辅助函数：获取播放状态名称
+                function getPlaybackStateName(state) {
+                    switch(state) {
+                        case MediaPlayer.StoppedState: return "StoppedState"
+                        case MediaPlayer.PlayingState: return "PlayingState"
+                        case MediaPlayer.PausedState: return "PausedState"
+                        default: return "Unknown(" + state + ")"
+                    }
+                }
+            }
+            
+            // Qt5版本：VideoOutput通过source属性连接到MediaPlayer
+            VideoOutput {
+                id: videoPlayer
+                anchors.fill: parent
+                visible: root.hasVideo
+                source: mediaPlayer  // Qt5通过source属性连接
+                fillMode: VideoOutput.PreserveAspectCrop
+                flushMode: VideoOutput.FirstFrame  
+                
+                // 辅助函数：获取播放状态名称
+                function getPlaybackStateName(state) {
+                    switch(state) {
+                        case MediaPlayer.StoppedState: return "StoppedState"
+                        case MediaPlayer.PlayingState: return "PlayingState"
+                        case MediaPlayer.PausedState: return "PausedState"
+                        default: return "Unknown(" + state + ")"
+                    }
+                }
+            }
+            //%QT5_END
 
             //     Rectangle {
             //         id: maskRect

@@ -1,9 +1,12 @@
-﻿import QtQuick 2.15
+import QtQuick 2.15
 import QtQuick.Controls 2.15
-import Qt5Compat.GraphicalEffects
-import "../common" 1.0
+//%IF_QT6 import Qt5Compat.GraphicalEffects
+//%IF_QT5 import QtGraphicalEffects 1.15
+import "@COMMON_IMPORT@"
 
+//%QT6_BEGIN
 pragma ComponentBehavior: Bound
+//%QT6_END
 
 /**
  * @brief Beautiful Card - 美观的卡片式组件
@@ -148,6 +151,7 @@ SWidget {
         border.width: 2
         border.color: root.borderColor
         
+        // 渐变背景：从文件颜色到主题色
         Rectangle {
             id: rect1
             anchors.fill: parent
@@ -155,15 +159,11 @@ SWidget {
             visible: false
         }
         
-        // 渐变背景：从文件颜色到主题色
-        // 注意：QML 的 Gradient 不支持对角线，使用水平渐变模拟
         LinearGradient{ 
             anchors.fill: parent
             start: Qt.point(0,0)
             end: Qt.point(width*0.9,height*0.9)
-            // radius: cardRadius
             source:rect1
-            // color: "transparent"
             z: 0  // 最底层：背景渐变
             gradient: Gradient {
             id: backgroundGradient
@@ -279,6 +279,9 @@ SWidget {
             }
         }
         }
+
+        
+
         
         // 边框颜色动画 - 与HTML版本一致：0.4s cubic-bezier(0.25, 0.8, 0.25, 1)
         Behavior on border.color {

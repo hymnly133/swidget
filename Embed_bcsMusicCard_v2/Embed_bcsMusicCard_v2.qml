@@ -1,7 +1,8 @@
-﻿import QtQuick 2.15
+import QtQuick 2.15
 import QtQuick.Controls 2.15
-import Qt5Compat.GraphicalEffects
-import "../common/" 1.0
+//%IF_QT6 import Qt5Compat.GraphicalEffects
+//%IF_QT5 import QtGraphicalEffects 1.15
+import "@COMMON_IMPORT@"
 
 //################################组件介绍###################################
 //# 																		#

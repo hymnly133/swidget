@@ -262,13 +262,13 @@ Window {
                             ctx.stroke()
                         }
                         
-                        // // 监听属性变化，自动重绘
-                        // Connections {
-                        //     target: colorDialog
-                        //     function onCurrentHueChanged() { colorMapCanvas.requestPaint() }
-                        //     function onCurrentSatChanged() { colorMapCanvas.requestPaint() }
-                        //     function onCurrentValChanged() { colorMapCanvas.requestPaint() }
-                        // }
+                        // 监听属性变化，自动重绘
+                        Connections {
+                            target: colorDialog
+                            function onCurrentHueChanged() { colorMapCanvas.requestPaint() }
+                            function onCurrentSatChanged() { colorMapCanvas.requestPaint() }
+                            function onCurrentValChanged() { colorMapCanvas.requestPaint() }
+                        }
                         
                         MouseArea {
                             anchors.fill: parent
@@ -312,11 +312,11 @@ Window {
                             ctx.stroke()
                         }
                         
-                        // // 监听属性变化，自动重绘
-                        // Connections {
-                        //     target: colorDialog
-                        //     function onCurrentHueChanged() { hueSliderCanvas.requestPaint() }
-                        // }
+                        // 监听属性变化，自动重绘
+                        Connections {
+                            target: colorDialog
+                            function onCurrentHueChanged() { hueSliderCanvas.requestPaint() }
+                        }
                         
                         MouseArea {
                             anchors.fill: parent
