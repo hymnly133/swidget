@@ -1,4 +1,4 @@
-﻿import QtQuick 2.15
+import QtQuick 2.15
 import QtQuick.Controls 2.15
 import QtQuick.Controls.Material 2.15
 //%IF_QT6 import Qt5Compat.GraphicalEffects
@@ -78,7 +78,8 @@ Item {
     
     // ==================== 其他属性 ====================
     property string currentOperationMode: "desktop"  // 当前操作模式（desktop: 桌面模式，edit: 编辑模式）
-    property bool unitVisible: (unit && unit.visible !== undefined) ? unit.visible : true  // 使用属性绑定，直接从unit获取可见性
+    // 未就绪或不可见时为 false，避免多页时 MP4/轮播等在非当前页误启动；仅当 unit 存在且 visible 为 true 时为 true
+    property bool unitVisible: (unit && unit.visible !== undefined) ? unit.visible : false
     property string widgetDataPath: ""      // 组件数据路径（由C++端设置，QML端只读，你可以使用QSettings自行读取和保存数据）
     property bool globalRoundCornerEnabled: true  // 内置的全局圆角，若开启，则会为组件内容套上完整的蒙版，限制内部元素，你可以关闭并根据unitRadius自绘圆角
     /**
@@ -455,6 +456,18 @@ Item {
      * 
      */
     signal persistentPropertyLoaded(string name, var value)
+
+    /**
+     * @brief 注册小组件所需的持久化资源文件路径列表（用于模板导出/加载时在内部适配）
+     * @param paths 路径列表，可为数组（如 ["path1", "path2"]）或单字符串（分号/逗号分隔）
+     *
+     * 小组件在路径变化时调用此接口，C++ 端据此在导出模板时收集资源；加载模板时路径会在内部替换后写回持久化属性。
+     */
+    function registerPersistentResourcePaths(paths) {
+        if (unit && unit.qmlModule) {
+            unit.qmlModule.registerPersistentResourcePaths(paths)
+        }
+    }
     
     
     // ==================== SMTC方法 ====================

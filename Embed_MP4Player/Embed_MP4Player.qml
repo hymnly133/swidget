@@ -30,42 +30,43 @@ SWidget {
     // 视频相关属性
     property string videoPath: ""
     property bool hasVideo: videoPath !== ""
+    
+    // 音频控制属性 - 默认静音
+    property bool isMuted: true
 
     globalRoundCornerEnabled: true
 
     fpsDisplayMode: SWidget.FpsDisplayMode.Never
-    onUnitVisibleChanged: {
-        console.log("组件可见性变化:", unitVisible)
-        console.log("当前透明度:", opacity)
 
+    // 根据 unitVisible 同步播放/暂停，避免加载时非当前页也自动播放（仅可见时播放）
+    function syncPlaybackToVisibility() {
         if (!unitVisible) {
-            console.log("组件变为不可见，暂停视频播放")
             if (mediaPlayer.playbackState === MediaPlayer.PlayingState) {
                 mediaPlayer.pause()
             }
         } else {
-            console.log("组件变为可见，恢复视频播放")
-            if (hasVideo && mediaPlayer.playbackState === MediaPlayer.PausedState) {
+            if (hasVideo && mediaPlayer.playbackState !== MediaPlayer.PlayingState) {
                 mediaPlayer.play()
             }
         }
     }
+
+    onUnitVisibleChanged: {
+        syncPlaybackToVisibility()
+    }
     
     // 监听视频路径变化
     onVideoPathChanged: {
-        console.log("=== 视频路径变化 ===")
-        console.log("新视频路径:", videoPath)
-        
+        // 向 C++ 注册持久化资源路径列表，供模板导出/加载时在内部适配
+        registerPersistentResourcePaths(videoPath ? [videoPath] : [])
         if (videoPath) {
-            console.log("设置视频源并准备播放")
             // 清除之前的错误信息
             if (errorText) {
                 errorText.visible = false
             }
-
+            // 源变化后根据可见性同步播放状态（仅可见页播放，避免多页同时播）
+            Qt.callLater(syncPlaybackToVisibility)
         } else {
-            console.log("清除视频源")
-
             // 清除错误信息
             if (errorText) {
                 errorText.visible = false
@@ -76,17 +77,14 @@ SWidget {
 
     // 组件加载完成时的处理
     Component.onCompleted: {
-        console.log("=== MP4视频播放组件加载完成 ===")
-        console.log("主题色:", unitMainColor)
-        console.log("当前主题色:", currentThemeColor)
-        console.log("当前操作模式:", currentOperationMode, "类型:", typeof currentOperationMode)
-        console.log("焦点状态:", unitIsFocus)
-        console.log("unit可见性" , unitVisible)
-        
         // 注册持久化属性
         registerPersistentProperty("videoPath", "")
-        console.log("已注册持久化属性: videoPath")
-        console.log("=== 组件初始化完成 ===")
+        registerPersistentProperty("isMuted", true)
+        // 同步当前视频路径到持久化资源列表（供模板导出/加载）
+        registerPersistentResourcePaths(videoPath ? [videoPath] : [])
+        // 关键：加载时根据当前可见性同步播放状态，避免非当前页的 MP4 自动播放导致性能问题
+        // 使用 callLater 确保 unitVisible 绑定已就绪（C++ 端可能晚一帧设置）
+        Qt.callLater(syncPlaybackToVisibility)
     }
 
 
@@ -213,19 +211,34 @@ SWidget {
             }
             
             //%QT6_BEGIN
+            // Qt6音频输出控制
+            AudioOutput {
+                id: audioOutput
+                muted: root.isMuted  // 绑定静音属性
+            }
+            
             // Qt6版本：MediaPlayer需要显式连接videoOutput和audioOutput
+            // autoPlay: false，仅当 unitVisible 时通过 syncPlaybackToVisibility() 播放，避免多页同时播放
             MediaPlayer {
                 id: mediaPlayer
-                autoPlay: true
+                autoPlay: false
                 loops: MediaPlayer.Infinite
                 source: root.videoPath
                 videoOutput: videoPlayer
-                audioOutput: AudioOutput {}  // Qt6需要显式设置音频输出
+                audioOutput: audioOutput  // Qt6需要显式设置音频输出
 
                 onSourceChanged: {
                     console.log("MediaPlayer源变化:", source)
                 }
-                
+
+                // 媒体就绪时若当前页可见则自动播放（兜底：布局可能晚于 onCompleted 才设 unit.visible）
+                onMediaStatusChanged: {
+                    if ((mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia)
+                            && root.unitVisible && root.hasVideo && playbackState !== MediaPlayer.PlayingState) {
+                        play()
+                    }
+                }
+
                 // 播放状态变化
                 onPlaybackStateChanged: {
                     console.log("播放状态变化:", playbackState, "状态名称:", getPlaybackStateName(playbackState))
@@ -285,16 +298,26 @@ SWidget {
             
             //%QT5_BEGIN
             // Qt5版本：MediaPlayer自动管理视频输出，不需要显式连接
+            // autoPlay: false，仅当 unitVisible 时通过 syncPlaybackToVisibility() 播放，避免多页同时播放
             MediaPlayer {
                 id: mediaPlayer
-                autoPlay: true
+                autoPlay: false
                 loops: MediaPlayer.Infinite
                 source: root.videoPath
+                muted: root.isMuted  // 绑定静音属性
 
                 onSourceChanged: {
                     console.log("MediaPlayer源变化:", source)
                 }
-                
+
+                // 媒体就绪时若当前页可见则自动播放（兜底：布局可能晚于 onCompleted 才设 unit.visible）
+                onMediaStatusChanged: {
+                    if ((mediaStatus === MediaPlayer.LoadedMedia || mediaStatus === MediaPlayer.BufferedMedia)
+                            && root.unitVisible && root.hasVideo && playbackState !== MediaPlayer.PlayingState) {
+                        play()
+                    }
+                }
+
                 // 播放状态变化
                 onPlaybackStateChanged: {
                     console.log("播放状态变化:", playbackState, "状态名称:", getPlaybackStateName(playbackState))
@@ -306,7 +329,7 @@ SWidget {
                         console.log("视频停止")
                     }
                 }
-                
+
                 // 辅助函数：获取状态名称
                 function getStatusName(status) {
                     switch(status) {
@@ -321,7 +344,7 @@ SWidget {
                         default: return "Unknown(" + status + ")"
                     }
                 }
-                
+
                 // 辅助函数：获取播放状态名称
                 function getPlaybackStateName(state) {
                     switch(state) {
@@ -332,7 +355,7 @@ SWidget {
                     }
                 }
             }
-            
+
             // Qt5版本：VideoOutput通过source属性连接到MediaPlayer
             VideoOutput {
                 id: videoPlayer
@@ -533,6 +556,37 @@ SWidget {
                 Layout.fillWidth: true
                 spacing: 8
                 
+                // 静音切换按钮
+                Button {
+                    visible: (root.currentOperationMode || "desktop") == "edit"
+                    id: muteButton
+                    text: root.isMuted ? "取消静音" : "静音"
+                    Layout.fillWidth: true
+                    Layout.preferredHeight: 24
+                    
+                    background: Rectangle {
+                        color: muteButton.pressed ? Qt.darker(root.isMuted ? "#9C27B0" : "#673AB7", 1.3) : (root.isMuted ? "#9C27B0" : "#673AB7")
+                        radius: 4
+                        border.color: "white"
+                        border.width: 1
+                    }
+                    
+                    contentItem: Text {
+                        text: muteButton.text
+                        color: "white"
+                        font.pixelSize: 10
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        renderType: Text.NativeRendering
+                        antialiasing: true
+                    }
+                    
+                    onClicked: {
+                        root.isMuted = !root.isMuted
+                        console.log("静音状态切换为:", root.isMuted)
+                    }
+                }
+                
                 // 调试按钮 - 显示当前视频路径
                 Button {
                     visible: (root.currentOperationMode || "desktop") == "edit"
@@ -546,8 +600,6 @@ SWidget {
                         radius: 4
                         border.color: "white"
                         border.width: 1
-                        
-
                     }
                     
                     contentItem: Text {
@@ -564,6 +616,7 @@ SWidget {
                         console.log("=== 调试信息 ===")
                         console.log("hasVideo:", root.hasVideo)
                         console.log("videoPath:", root.videoPath)
+                        console.log("isMuted:", root.isMuted)
                         console.log("mediaPlayer.source:", mediaPlayer.source)
                         console.log("mediaPlayer.status:", mediaPlayer.mediaStatus)
                         console.log("mediaPlayer.playbackState:", mediaPlayer.playbackState)
@@ -571,7 +624,6 @@ SWidget {
                         console.log("mediaPlayer.position:", mediaPlayer.position)
                     }
                 }
-                
             }
         }
     }

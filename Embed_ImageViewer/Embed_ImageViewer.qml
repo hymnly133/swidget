@@ -1,10 +1,12 @@
-﻿import QtQuick 2.15
+import QtQuick 2.15
 import QtQuick.Controls 2.15
-import QtQuick.Controls.Basic
+//%IF_QT6 import QtQuick.Controls.Basic
 import QtQuick.Layouts 1.15
-import QtQuick.Dialogs
-import Qt5Compat.GraphicalEffects
-import "../common"
+//%IF_QT6 import QtQuick.Dialogs
+//%IF_QT5 import QtQuick.Dialogs 1.3
+//%IF_QT6 import Qt5Compat.GraphicalEffects
+//%IF_QT5 import QtGraphicalEffects 1.15
+import "@COMMON_IMPORT@"
 /**
  * @brief 图片轮播QML组件
  * 
@@ -18,9 +20,30 @@ SWidget{
     globalRoundCornerEnabled: false
 
     // 这里需要在内部定义，因为C++解析持久化数据时，会自动设置和保存这些属性
+    //%QT6_BEGIN
     property list<string> imageList: []
+    //%QT6_END
+    
+    //%QT5_BEGIN
+    // Qt5不支持list<string>，使用var类型替代
+    property var imageList: []
+    // Qt5持久化属性：使用字符串存储图片列表（用分号分隔）
+    property string imageListString: ""
+    //%QT5_END
 
-    property int imageCount: imageList.length
+    property int imageCount: {
+        //%QT6_BEGIN
+        return imageList.length
+        //%QT6_END
+        
+        //%QT5_BEGIN
+        // Qt5中需要安全地获取数组长度
+        if (!imageList || typeof imageList.length === 'undefined') {
+            return 0
+        }
+        return imageList.length
+        //%QT5_END
+    }
     property int currentImageIndex: 0
     property bool hasImage: imageCount > 0
     property bool multipleImage: imageCount > 1    
@@ -28,7 +51,7 @@ SWidget{
     property bool autoPlay: true
     // 存储所有图片页面的数组
     property var imagePages: []
-    
+
     // 渲染优化设置
     layer.enabled: true
     layer.smooth: true
@@ -37,7 +60,19 @@ SWidget{
 
     // 同步imageList和imagePages - 维护增删逻辑
     function syncImagePages() {
-        console.log("同步图片页面，imageList长度:", imageList.length, "imagePages长度:", imagePages.length)
+        //%QT6_BEGIN
+        var listLength = imageList.length
+        //%QT6_END
+        
+        //%QT5_BEGIN
+        // Qt5中安全地获取数组长度
+        var listLength = 0
+        if (imageList && typeof imageList.length !== 'undefined') {
+            listLength = imageList.length
+        }
+        //%QT5_END
+        
+        console.log("同步图片页面，imageList长度:", listLength, "imagePages长度:", imagePages.length)
 
         imageStackView.clear()
         for (var i = 0; i < imagePages.length; i++) {
@@ -48,12 +83,24 @@ SWidget{
         imagePages = []
         
         // 添加或更新页面
-        for (var i = 0; i < imageList.length; i++) {
+        for (var i = 0; i < listLength; i++) {
+            //%QT6_BEGIN
+            var imageSource = imageList[i]
+            //%QT6_END
+            
+            //%QT5_BEGIN
+            // Qt5中安全地访问数组元素
+            var imageSource = ""
+            if (imageList && imageList[i]) {
+                imageSource = imageList[i]
+            }
+            //%QT5_END
+            
             var newPage = imagePageComponent.createObject(imageStackView, {
-                imageSource: imageList[i]
+                imageSource: imageSource
             })
             imagePages.push(newPage)
-            console.log("创建新页面:", imageList[i])
+            console.log("创建新页面:", imageSource)
         }
         
         console.log("同步完成，imagePages长度:", imagePages.length)
@@ -67,7 +114,18 @@ SWidget{
     // 切换到下一张图片
     function nextImage() {
         if (multipleImage && hasImage) {
-            var nextIndex = (currentImageIndex + 1) % imageList.length
+            //%QT6_BEGIN
+            var listLength = imageList.length
+            //%QT6_END
+            
+            //%QT5_BEGIN
+            var listLength = 0
+            if (imageList && typeof imageList.length !== 'undefined') {
+                listLength = imageList.length
+            }
+            //%QT5_END
+            
+            var nextIndex = (currentImageIndex + 1) % listLength
             switchToImage(nextIndex)
         }
     }
@@ -75,17 +133,39 @@ SWidget{
     // 切换到上一张图片
     function previousImage() {
         if (multipleImage && hasImage) {
-            var prevIndex = currentImageIndex > 0 ? currentImageIndex - 1 : imageList.length - 1
+            //%QT6_BEGIN
+            var listLength = imageList.length
+            //%QT6_END
+            
+            //%QT5_BEGIN
+            var listLength = 0
+            if (imageList && typeof imageList.length !== 'undefined') {
+                listLength = imageList.length
+            }
+            //%QT5_END
+            
+            var prevIndex = currentImageIndex > 0 ? currentImageIndex - 1 : listLength - 1
             switchToImage(prevIndex)
         }
     }
     
     // 图片切换函数 - 使用StackView.replace实现渐隐效果
     function switchToImage(newIndex) {
-        if (!imageList.length || newIndex < 0 || newIndex >= imageList.length) {
+        //%QT6_BEGIN
+        var listLength = imageList.length
+        //%QT6_END
+        
+        //%QT5_BEGIN
+        var listLength = 0
+        if (imageList && typeof imageList.length !== 'undefined') {
+            listLength = imageList.length
+        }
+        //%QT5_END
+        
+        if (!listLength || newIndex < 0 || newIndex >= listLength) {
             console.log("无效的图片索引:", newIndex)
             console.log("当前图片索引:", currentImageIndex)
-            console.log("图片列表长度:", imageList.length)
+            console.log("图片列表长度:", listLength)
             console.log("hasImage:", hasImage)
             return
         }
@@ -111,10 +191,68 @@ SWidget{
     }
     
 
-    // 监听imageList变化 - 同步页面
+    // 监听imageList变化 - 同步页面并同步持久化资源路径列表
+    //%QT6_BEGIN
     onImageListChanged: {
+        root.registerPersistentResourcePaths(imageList || [])
         syncImagePages()
     }
+    //%QT6_END
+    
+    //%QT5_BEGIN
+    // Qt5中var类型修改数组内容不会自动触发onChanged信号
+    // 使用Connections监听imageList的变化，或者手动调用syncImagePages
+    // 由于Qt5的限制，我们需要在修改imageList后手动调用syncImagePages
+    // 这里保留onImageListChanged作为备用，但主要依赖手动调用
+    onImageListChanged: {
+        updateImageListString()  // 同步更新持久化字符串
+        syncImagePages()
+    }
+    
+    // Qt5辅助函数：安全地修改imageList并触发同步
+    function modifyImageList(operation) {
+        // operation是一个函数，接收当前imageList并返回新的imageList
+        var newList = operation(imageList)
+        imageList = newList
+        updateImageListString()  // 更新持久化字符串
+        // 手动触发同步（因为var类型可能不会触发onChanged）
+        syncImagePages()
+    }
+    
+    // Qt5辅助函数：将imageList数组序列化为字符串（用分号分隔）
+    function updateImageListString() {
+        if (!imageList || typeof imageList.length === 'undefined') {
+            imageListString = ""
+            root.registerPersistentResourcePaths("")
+            return
+        }
+        var strArray = []
+        for (var i = 0; i < imageList.length; i++) {
+            if (imageList[i]) {
+                strArray.push(imageList[i])
+            }
+        }
+        imageListString = strArray.join(";")
+        root.registerPersistentResourcePaths(imageListString)
+    }
+    
+    // Qt5辅助函数：从字符串反序列化为imageList数组
+    function parseImageListString() {
+        if (!imageListString || imageListString === "") {
+            imageList = []
+            return
+        }
+        var paths = imageListString.split(";")
+        var newList = []
+        for (var i = 0; i < paths.length; i++) {
+            var path = paths[i].trim()
+            if (path !== "") {
+                newList.push(path)
+            }
+        }
+        imageList = newList
+    }
+    //%QT5_END
     
     // 监听currentImageIndex变化 - 切换图片
     onCurrentImageIndexChanged: {
@@ -135,7 +273,7 @@ SWidget{
                 property string imageSource: ""
 
                 
-                // 图片显示
+                // 图片显示（使用 file:// URL 确保 Windows 下本地路径能正确显示）
                 Image {
                     id: pageImage
                     anchors.fill: parent
@@ -152,24 +290,23 @@ SWidget{
                 }
             }
         }
-        // 自动轮播定时器
+        // 自动轮播定时器：仅当组件可见时运行（unitVisible 由 SWidget 绑定，未就绪时默认为 false，避免多页同时轮播）
         Timer {
             id: autoSlideTimer
             interval: 3000 // 3秒自动切换
             repeat: true
-            running: root.multipleImage && root.unitVisible && root.autoPlay   // 只有在组件可见且不透明时才运行
-            
+            running: root.multipleImage && root.unitVisible && root.autoPlay
+
             onTriggered: {
-                console.log("自动轮播定时器触发")
                 if (root.multipleImage) {
-                    root.nextImage()  // 使用新的切换函数
+                    root.nextImage()
                 }
-                console.log("自动轮播定时器触发,unitVisible:", root.unitVisible)
             }
         }
 
         
         // 文件对话框 - 支持多选
+        //%QT6_BEGIN
         FileDialog {
             id: imageFileDialog
             title: "选择图片"
@@ -213,6 +350,83 @@ SWidget{
                 console.log("取消选择图片")
             }
         }
+        //%QT6_END
+        
+        //%QT5_BEGIN
+        FileDialog {
+            id: imageFileDialog
+            title: "选择图片"
+            selectMultiple: true  // Qt5使用selectMultiple属性
+            nameFilters: ["图片文件 (*.png *.jpg *.jpeg *.bmp *.gif)"]
+            onAccepted: {
+                // Qt5中安全地获取fileUrls
+                var urls = fileUrls
+                if (!urls || typeof urls.length === 'undefined') {
+                    console.log("没有选择文件或fileUrls为null")
+                    return
+                }
+                
+                console.log("选择的文件数量:", urls.length)
+                
+                // Qt5使用fileUrls而不是selectedFiles
+                // 处理多个文件路径
+                for (var i = 0; i < urls.length; i++) {
+                    var urlItem = urls[i]
+                    if (!urlItem) continue
+                    
+                    var newImagePath = urlItem.toString()
+                    console.log("选择的图片路径 " + (i + 1) + ":", newImagePath)
+                    
+                    // 检查是否已存在相同路径的图片
+                    var isDuplicate = false
+                    var currentListLength = 0
+                    if (root.imageList && typeof root.imageList.length !== 'undefined') {
+                        currentListLength = root.imageList.length
+                    }
+                    
+                    for (var j = 0; j < currentListLength; j++) {
+                        if (root.imageList[j] === newImagePath) {
+                            isDuplicate = true
+                            console.log("跳过重复图片:", newImagePath)
+                            break
+                        }
+                    }
+                    
+                    // 如果不是重复图片，则添加到列表
+                    // Qt5中需要重新赋值整个数组以触发onChanged信号
+                    if (!isDuplicate) {
+                        var newList = []
+                        if (root.imageList && typeof root.imageList.slice === 'function') {
+                            newList = root.imageList.slice()  // 创建副本
+                        }
+                        newList.push(newImagePath)  // 修改副本
+                        root.imageList = newList  // 重新赋值以触发onChanged
+                        root.updateImageListString()  // 更新持久化字符串
+                        console.log("添加新图片:", newImagePath)
+                    }
+                }
+                
+                // 如果之前没有图片，设置当前索引为第一张
+                var finalListLength = 0
+                if (root.imageList && typeof root.imageList.length !== 'undefined') {
+                    finalListLength = root.imageList.length
+                }
+                if (finalListLength > 0 && root.currentImageIndex < 0) {
+                    root.currentImageIndex = 0
+                }
+                
+                // Qt5中手动触发同步（确保即使onChanged未触发也能同步）
+                root.syncImagePages()
+                
+                console.log("更新后的图片列表:", root.imageList)
+                console.log("当前图片索引:", root.currentImageIndex)
+                console.log("hasImage状态:", root.hasImage)
+            }
+            onRejected: {
+                console.log("取消选择图片")
+            }
+        }
+        //%QT5_END
     
     
 
@@ -668,7 +882,18 @@ SWidget{
             }
             
             onClicked: {
+                //%QT6_BEGIN
                 root.imageList = []
+                //%QT6_END
+                
+                //%QT5_BEGIN
+                // Qt5中需要重新赋值以触发onChanged信号
+                root.imageList = []
+                root.imageListString = ""  // 清空持久化字符串
+                // 手动触发同步（确保即使onChanged未触发也能同步）
+                root.syncImagePages()
+                //%QT5_END
+                
                 root.currentImageIndex = 0
                 console.log("清除所有图片")
             }
@@ -688,9 +913,39 @@ SWidget{
         console.log("初始currentImageIndex:", currentImageIndex)
         console.log("初始hasImage:", hasImage)
 
+        //%QT6_BEGIN
         root.registerPersistentProperty("imageList", [])
-        root.registerPersistentProperty("autoPlay", [])
+        root.registerPersistentResourcePaths(root.imageList || [])
+        //%QT6_END
         
-        console.log("=== 组件初始化完成 ===")
+        //%QT5_BEGIN
+        // Qt5中持久化属性不能直接使用列表，使用字符串辅助属性
+        root.registerPersistentProperty("imageListString", "")
+        // 如果imageListString有值，解析它
+        if (root.imageListString && root.imageListString !== "") {
+            root.parseImageListString()
+        } else {
+            // 如果没有持久化数据，初始化空数组
+            root.imageList = []
+        }
+        root.registerPersistentResourcePaths(root.imageListString || "")
+        //%QT5_END
+        
+        root.registerPersistentProperty("autoPlay", true)
     }
+    
+    //%QT5_BEGIN
+    // Qt5中监听imageListString变化，自动解析
+    // 注意：这个信号会在C++端设置持久化属性时触发
+    onImageListStringChanged: {
+        // 避免在Component.onCompleted之前解析（此时imageList可能还未初始化）
+        if (typeof imageList !== 'undefined') {
+            if (imageListString && imageListString !== "") {
+                parseImageListString()
+            } else {
+                imageList = []
+            }
+        }
+    }
+    //%QT5_END
 } 
