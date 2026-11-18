@@ -115,18 +115,13 @@ SWidget {
         ]
 
         onAccepted: {
-            console.log("选择的视频文件:", selectedFile)
             
             var newVideoPath = selectedFile.toString()
-            console.log("选择的视频路径:", newVideoPath)
             
             // 设置视频路径
             root.videoPath = newVideoPath
-            console.log("更新后的视频路径:", root.videoPath)
-            console.log("hasVideo状态:", root.hasVideo)
         }
         onRejected: {
-            console.log("取消选择视频文件")
         }
     }
     //%QT6_END
@@ -144,18 +139,13 @@ SWidget {
         ]
 
         onAccepted: {
-            console.log("选择的视频文件:", fileUrl)
             
             var newVideoPath = fileUrl.toString()
-            console.log("选择的视频路径:", newVideoPath)
             
             // 设置视频路径
             root.videoPath = newVideoPath
-            console.log("更新后的视频路径:", root.videoPath)
-            console.log("hasVideo状态:", root.hasVideo)
         }
         onRejected: {
-            console.log("取消选择视频文件")
         }
     }
     //%QT5_END
@@ -179,17 +169,14 @@ SWidget {
             
             // 让点击事件穿透到下层组件
             onClicked: function(mouse) {
-                console.log("MouseArea点击事件穿透")
                 mouse.accepted = false  // 不处理点击事件，让事件继续传播
             }
             
             onDoubleClicked: function(mouse) {
-                console.log("MouseArea双击事件穿透")
                 mouse.accepted = false  // 不处理双击事件，让事件继续传播
             }
             
             onPressed: function(mouse) {
-                console.log("MouseArea按下事件穿透")
                 if(root.hasVideo) {
                     mouse.accepted = false  // 不处理点击事件，让事件继续传播
                     return
@@ -206,7 +193,6 @@ SWidget {
             }
             
             onReleased: function(mouse) {
-                console.log("MouseArea释放事件穿透")
                 mouse.accepted = false  // 不处理释放事件，让事件继续传播
             }
             
@@ -228,7 +214,6 @@ SWidget {
                 audioOutput: audioOutput  // Qt6需要显式设置音频输出
 
                 onSourceChanged: {
-                    console.log("MediaPlayer源变化:", source)
                 }
 
                 // 媒体就绪时若当前页可见则自动播放（兜底：布局可能晚于 onCompleted 才设 unit.visible）
@@ -241,13 +226,9 @@ SWidget {
 
                 // 播放状态变化
                 onPlaybackStateChanged: {
-                    console.log("播放状态变化:", playbackState, "状态名称:", getPlaybackStateName(playbackState))
                     if (playbackState === MediaPlayer.PlayingState) {
-                        console.log("视频开始播放")
                     } else if (playbackState === MediaPlayer.PausedState) {
-                        console.log("视频暂停")
                     } else if (playbackState === MediaPlayer.StoppedState) {
-                        console.log("视频停止")
                     }
                 }
                 
@@ -307,7 +288,6 @@ SWidget {
                 muted: root.isMuted  // 绑定静音属性
 
                 onSourceChanged: {
-                    console.log("MediaPlayer源变化:", source)
                 }
 
                 // 媒体就绪时若当前页可见则自动播放（兜底：布局可能晚于 onCompleted 才设 unit.visible）
@@ -320,13 +300,9 @@ SWidget {
 
                 // 播放状态变化
                 onPlaybackStateChanged: {
-                    console.log("播放状态变化:", playbackState, "状态名称:", getPlaybackStateName(playbackState))
                     if (playbackState === MediaPlayer.PlayingState) {
-                        console.log("视频开始播放")
                     } else if (playbackState === MediaPlayer.PausedState) {
-                        console.log("视频暂停")
                     } else if (playbackState === MediaPlayer.StoppedState) {
-                        console.log("视频停止")
                     }
                 }
 
@@ -502,7 +478,6 @@ SWidget {
                     
                     onClicked: {
                         root.videoPath = ""
-                        console.log("清除视频文件")
                     }
                 }
                 
@@ -533,19 +508,12 @@ SWidget {
                     }
                     
                     onClicked: {
-                        console.log("=== 手动测试播放 ===")
-                        console.log("当前视频源:", mediaPlayer.source)
-                        console.log("当前状态:", mediaPlayer.mediaStatus)
-                        console.log("当前播放状态:", mediaPlayer.playbackState)
-                        console.log("videoPath:", root.videoPath)
                         
                         if (root.hasVideo) {
-                            console.log("强制重新设置视频源")
                             // mediaPlayer.source = videoPath
                             mediaPlayer.play()
 
                         } else {
-                            console.log("没有视频文件，无法播放")
                         }
                     }
                 }
@@ -583,7 +551,6 @@ SWidget {
                     
                     onClicked: {
                         root.isMuted = !root.isMuted
-                        console.log("静音状态切换为:", root.isMuted)
                     }
                 }
                 
@@ -613,15 +580,6 @@ SWidget {
                     }
                     
                     onClicked: {
-                        console.log("=== 调试信息 ===")
-                        console.log("hasVideo:", root.hasVideo)
-                        console.log("videoPath:", root.videoPath)
-                        console.log("isMuted:", root.isMuted)
-                        console.log("mediaPlayer.source:", mediaPlayer.source)
-                        console.log("mediaPlayer.status:", mediaPlayer.mediaStatus)
-                        console.log("mediaPlayer.playbackState:", mediaPlayer.playbackState)
-                        console.log("mediaPlayer.duration:", mediaPlayer.duration)
-                        console.log("mediaPlayer.position:", mediaPlayer.position)
                     }
                 }
             }
@@ -634,7 +592,6 @@ SWidget {
 
     // 组件销毁时的处理
     Component.onDestruction: {
-        console.log("MP4视频播放组件即将销毁")
         if (mediaPlayer.playbackState === MediaPlayer.PlayingState) {
             mediaPlayer.stop()
         }
@@ -642,26 +599,21 @@ SWidget {
     
     // 定义可被C++调用的方法
     function mouseEntered() {
-        console.log("鼠标进入MP4视频播放组件")
         if(root.unit.logDebug) {
             root.unit.logDebug("MP4视频播放组件收到鼠标进入事件")
         } else {
-            console.log("找不到unit.logDebug")
         }
     }
     
     function mouseLeft() {
-        console.log("鼠标离开MP4视频播放组件")
         root.unit.logDebug("鼠标离开MP4视频播放组件")
     }
     
     function singleClicked() {
-        console.log("MP4视频播放组件收到单击事件")
         root.unit.logDebug("MP4视频播放组件收到单击事件")
     }
     
     function doubleClicked() {
-        console.log("MP4视频播放组件收到双击事件")
     }
     
 }

@@ -132,7 +132,6 @@ SWidget{
     // 同步imageList和imagePages：清空旧页面，页面在切换到时才创建
     function syncImagePages() {
         var listLength = imageListLength()
-        console.log("同步图片页面，imageList长度:", listLength, "imagePages长度:", imagePages.length)
 
         imageStackView.clear()
         for (var i = 0; i < imagePages.length; i++) {
@@ -215,7 +214,6 @@ SWidget{
         var listLength = imageListLength()
 
         if (!listLength || newIndex < 0 || newIndex >= listLength) {
-            console.log("无效的图片索引:", newIndex, "当前图片索引:", currentImageIndex, "图片列表长度:", listLength)
             return
         }
 
@@ -223,7 +221,6 @@ SWidget{
             return  // 已经是当前图片，不需要切换
         }
 
-        console.log("切换到图片索引:", newIndex, "从:", currentImageIndex)
         currentImageIndex = newIndex
 
         var page = getOrCreatePage(newIndex)
@@ -387,19 +384,16 @@ SWidget{
             fileMode : FileDialog.OpenFiles
             nameFilters: ["图片文件 (*.png *.jpg *.jpeg *.bmp *.gif)"]
             onAccepted: {
-                console.log("选择的文件数量:", selectedFiles.length)
                 
                 // 处理多个文件路径
                 for (var i = 0; i < selectedFiles.length; i++) {
                     var newImagePath = selectedFiles[i].toString()
-                    console.log("选择的图片路径 " + (i + 1) + ":", newImagePath)
                     
                     // 检查是否已存在相同路径的图片
                     var isDuplicate = false
                     for (var j = 0; j < root.imageList.length; j++) {
                         if (root.imageList[j] === newImagePath) {
                             isDuplicate = true
-                            console.log("跳过重复图片:", newImagePath)
                             break
                         }
                     }
@@ -407,7 +401,6 @@ SWidget{
                     // 如果不是重复图片，则添加到列表
                     if (!isDuplicate) {
                         root.imageList.push(newImagePath)
-                        console.log("添加新图片:", newImagePath)
                     }
                 }
                 
@@ -416,12 +409,8 @@ SWidget{
                     root.currentImageIndex = 0
                 }
                 
-                console.log("更新后的图片列表:", root.imageList)
-                console.log("当前图片索引:", root.currentImageIndex)
-                console.log("hasImage状态:", root.hasImage)
             }
             onRejected: {
-                console.log("取消选择图片")
             }
         }
         //%QT6_END
@@ -436,11 +425,9 @@ SWidget{
                 // Qt5中安全地获取fileUrls
                 var urls = fileUrls
                 if (!urls || typeof urls.length === 'undefined') {
-                    console.log("没有选择文件或fileUrls为null")
                     return
                 }
                 
-                console.log("选择的文件数量:", urls.length)
                 
                 // Qt5使用fileUrls而不是selectedFiles
                 // 处理多个文件路径
@@ -449,7 +436,6 @@ SWidget{
                     if (!urlItem) continue
                     
                     var newImagePath = urlItem.toString()
-                    console.log("选择的图片路径 " + (i + 1) + ":", newImagePath)
                     
                     // 检查是否已存在相同路径的图片
                     var isDuplicate = false
@@ -461,7 +447,6 @@ SWidget{
                     for (var j = 0; j < currentListLength; j++) {
                         if (root.imageList[j] === newImagePath) {
                             isDuplicate = true
-                            console.log("跳过重复图片:", newImagePath)
                             break
                         }
                     }
@@ -476,7 +461,6 @@ SWidget{
                         newList.push(newImagePath)  // 修改副本
                         root.imageList = newList  // 重新赋值以触发onChanged
                         root.updateImageListString()  // 更新持久化字符串
-                        console.log("添加新图片:", newImagePath)
                     }
                 }
                 
@@ -492,12 +476,8 @@ SWidget{
                 // Qt5中手动触发同步（确保即使onChanged未触发也能同步）
                 root.syncImagePages()
                 
-                console.log("更新后的图片列表:", root.imageList)
-                console.log("当前图片索引:", root.currentImageIndex)
-                console.log("hasImage状态:", root.hasImage)
             }
             onRejected: {
-                console.log("取消选择图片")
             }
         }
         //%QT5_END
@@ -657,20 +637,16 @@ SWidget{
                 }
 
                 onPressed: function(mouse) {
-                    console.log("outImageMouseArea按下事件")
                     if(root.hasImage) {
-                        console.log("MouseArea按下事件穿透,有图片")
                         mouse.accepted = false
                         return
                     }
                     else{
                         if(root.currentOperationMode != "edit"){
-                            console.log("MouseArea接受,无图片,打开文件对话框")
                             imageFileDialog.open()
                             mouse.accepted = true
                         }
                         else{
-                            console.log("MouseArea按下事件穿透,无图片,不打开文件对话框")
                             mouse.accepted = false
                         }
                     }
@@ -804,10 +780,6 @@ SWidget{
                     
                     // 调试信息
                     Component.onCompleted: {
-                        console.log("轮播控制按钮可见性检查:")
-                        console.log("  hasImage:", root.hasImage)
-                        console.log("  imageList.length:", root.imageList.length)
-                        console.log("  visible:", visible)
                     }
                     
                     // 上一张按钮
@@ -834,23 +806,19 @@ SWidget{
                             propagateComposedEvents: true
 
                             onEntered: {
-                                console.log("鼠标进入上一张按钮")
                                 parent.color = Qt.rgba(0.8, 0.42, 0.42, 0.9)
                             }
                             
                             onExited: {
-                                console.log("鼠标离开上一张按钮")
                                 parent.color = Qt.rgba(0, 0, 0, 0.8)
                             }
 
                             onPressed: function(mouse) {
-                                console.log("按下上一张按钮")
                                 root.previousImage()
                                 mouse.accepted = true
                             }
 
                             onReleased: function(mouse){
-                                console.log("释放上一张按钮")
                                 mouse.accepted = false
                             }
                             
@@ -971,7 +939,6 @@ SWidget{
                 //%QT5_END
                 
                 root.currentImageIndex = 0
-                console.log("清除所有图片")
             }
         }
     
@@ -980,14 +947,6 @@ SWidget{
     
     // 组件加载完成时的处理
     Component.onCompleted:  function() {
-        console.log("=== QML组件加载完成 ===")
-        console.log("主题色:", unitMainColor)
-        console.log("当前主题色:", currentThemeColor)
-        console.log("当前操作模式:", currentOperationMode, "类型:", typeof currentOperationMode)
-        console.log("焦点状态:", unitIsFocus)
-        console.log("初始imageList:", imageList)
-        console.log("初始currentImageIndex:", currentImageIndex)
-        console.log("初始hasImage:", hasImage)
 
         //%QT6_BEGIN
         root.registerPersistentProperty("imageList", [])

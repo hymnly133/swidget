@@ -199,11 +199,6 @@ SWidget {
                     centerImageNext.source = "";
                     centerImageCurrent.opacity = 1;
                     centerImageNext.opacity = 0;
-
-                    // 强制垃圾回收
-                    if (typeof gc === 'function') {
-                        gc();
-                    }
                 }
             }
         }
@@ -236,11 +231,6 @@ SWidget {
                     verticalCenterImageNext.source = "";
                     verticalCenterImageCurrent.opacity = 1;
                     verticalCenterImageNext.opacity = 0;
-
-                    // 强制垃圾回收
-                    if (typeof gc === 'function') {
-                        gc();
-                    }
                 }
             }
         }
@@ -272,10 +262,6 @@ SWidget {
                     backgroundAlbumArtNext.source = "";
                     backgroundAlbumArtCurrent.opacity = backgroundContainer_opacity;
                     backgroundAlbumArtNext.opacity = 0;
-
-                    if (typeof gc === 'function') {
-                        gc();
-                    }
                 }
             }
         }
@@ -444,7 +430,7 @@ SWidget {
                             
                             BusyIndicator {
                                 anchors.centerIn: parent
-                                running: true
+                                running: visible
                                 width: Math.min(parent.width, parent.height) * 0.4
                                 height: width
                             }
@@ -541,19 +527,20 @@ SWidget {
 							}
 						}
 						
-						// 滚动动画计时器
-						Timer {
-							id: scrollTimer
-							interval: 16 // 约60fps
-							running: scrollingTextRoot.isScrolling
-							repeat: true
-							onTriggered: {
-								scrollingTextRoot.scrollOffset -= (scrollSpeed * interval / 1000);
-								scrollingTextRoot.totalScrollDistance += (scrollSpeed * interval / 1000);
-								
-								// 检查是否滚动完成（第二个文本的开头已经滚动到视口的开头）
-								// 我们需要滚动直到第二个文本的开头与视口左侧对齐
-								if (scrollingTextRoot.totalScrollDistance >= textItem1.width + 50) {
+						// 滚动动画：渲染线程驱动，替代原 16ms JS Timer；
+						// running 绑定同时实现组件不可见时自动暂停（不再每帧唤醒 JS）
+						NumberAnimation {
+							id: scrollAnimation
+							target: scrollingTextRoot
+							property: "scrollOffset"
+							from: 0
+							to: 0
+							duration: 0
+							easing.type: Easing.Linear
+							running: scrollingTextRoot.isScrolling && root.unitVisible
+							onStopped: {
+								// 自然播完才进入停止重置流程；手动 stop（isScrolling 已为 false）不处理
+								if (scrollingTextRoot.isScrolling) {
 									stopScrolling();
 								}
 							}
@@ -590,17 +577,20 @@ SWidget {
 							}
 						}
 						
-						// 开始滚动
+						// 开始滚动：设置动画参数后由 running 绑定启动（可见时才真正播放）
 						function startScrolling() {
-							scrollingTextRoot.isScrolling = true;
 							scrollingTextRoot.totalScrollDistance = 0;
-							scrollTimer.restart();
+							scrollingTextRoot.scrollOffset = 0;
+							var distance = textItem1.width + 50;
+							scrollAnimation.from = 0;
+							scrollAnimation.to = -distance;
+							scrollAnimation.duration = Math.max(1, distance / scrollSpeed * 1000);
+							scrollingTextRoot.isScrolling = true;
 						}
 						
 						// 停止滚动
 						function stopScrolling() {
 							scrollingTextRoot.isScrolling = false;
-							scrollTimer.stop();
 							// 延迟一会后重置状态
 							resetTimer.restart();
 						}
@@ -612,7 +602,6 @@ SWidget {
 							scrollingTextRoot.totalScrollDistance = 0;
 							scrollingTextRoot.hasScrolled = false;
 							pauseTimer.stop();
-							scrollTimer.stop();
 							resetTimer.stop();
 						}
 						
