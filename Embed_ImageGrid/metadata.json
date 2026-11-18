@@ -1,0 +1,32 @@
+{
+	"author": "hymnly133",
+	"authorEmail": "hymn133@foxmail.com",
+	"authorWebsite": "sapphire.icu",
+	"customFields": {},
+	"defaultGridSize": {
+		"cols": 3,
+		"rows": 1
+	},
+	"defaultShowBackground": false,
+	"description": "多张图片水平排列成横幅，悬停时图片加宽并恢复彩色",
+	"displayName": "横幅图片",
+	"functions": [],
+	"manualFileName": "",
+	"minimumAppVersion": "",
+	"mouseEventMode": 0,
+	"name": "Embed_ImageGrid",
+	"permissions": [],
+	"previewImageFileName": "",
+	"supportTypes": {
+		"supportsFile": false,
+		"supportsImage": true,
+		"supportsVideo": false
+	},
+	"tags": [
+		"图片",
+		"横幅"
+	],
+	"version": "1.0.0",
+	"widgetFileName": "Embed_ImageGrid.qml",
+	"widgetType": "Qml"
+}
