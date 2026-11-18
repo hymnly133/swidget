@@ -1,7 +1,9 @@
-import QtQuick 2.15
+//%IF_QT5 import QtQuick 2.15
+//%IF_QT6 import QtQuick
 import QtQuick.Controls 2.15
 //%IF_QT6 import QtQuick.Controls.Basic
 import QtQuick.Layouts 1.15
+import QtQuick.Window 2.15
 //%IF_QT6 import QtQuick.Dialogs
 //%IF_QT5 import QtQuick.Dialogs 1.3
 //%IF_QT6 import Qt5Compat.GraphicalEffects
@@ -49,8 +51,13 @@ SWidget{
     property bool multipleImage: imageCount > 1    
     property real rotationScale: 1.0  // 图片放大倍数，用于容纳3D旋转
     property bool autoPlay: true
-    // 存储所有图片页面的数组
+    // 已创建的图片页面，按 imageList 下标存放；未创建或已释放的位置为 null
     property var imagePages: []
+    // 只保留当前页及前后 cacheRange 页，其余页面在切换动画结束后销毁，释放解码后的图片
+    property int cacheRange: 1
+    // 图片解码边长上限（物理像素）。按显示区域长边的 2 倍取整，为悬停放大和 3D 旋转留出余量；
+    // 显示区域明显变大时才增大，避免按原图分辨率解码（一张 4K 壁纸解码后约 60MB）
+    property int decodeEdge: 256
 
     // 渲染优化设置
     layer.enabled: true
@@ -58,20 +65,73 @@ SWidget{
     layer.samples: 2  // 4x MSAA抗锯齿
     layer.mipmap: true
 
-    // 同步imageList和imagePages - 维护增删逻辑
-    function syncImagePages() {
+    function imageListLength() {
         //%QT6_BEGIN
-        var listLength = imageList.length
+        return imageList.length
         //%QT6_END
-        
+
         //%QT5_BEGIN
         // Qt5中安全地获取数组长度
-        var listLength = 0
-        if (imageList && typeof imageList.length !== 'undefined') {
-            listLength = imageList.length
+        if (!imageList || typeof imageList.length === 'undefined') {
+            return 0
         }
+        return imageList.length
         //%QT5_END
-        
+    }
+
+    // 显示区域尺寸；所在桌面页尚未显示时组件还没有布局尺寸，用单元尺寸估算，
+    // 避免先按最小上限解码、切到该页时再重新解码
+    function viewWidth() {
+        if (stackViewContainer.width > 0) {
+            return stackViewContainer.width
+        }
+        return (root.unit && root.unit.width > 0) ? root.unit.width : 0
+    }
+
+    function viewHeight() {
+        if (stackViewContainer.height > 0) {
+            return stackViewContainer.height
+        }
+        return (root.unit && root.unit.height > 0) ? root.unit.height : 0
+    }
+
+    function requiredDecodeEdge(scale) {
+        var longSide = Math.max(viewWidth(), viewHeight(), 64) * Screen.devicePixelRatio
+        return Math.ceil(longSide * scale / 128) * 128
+    }
+
+    function updateDecodeEdge() {
+        if (requiredDecodeEdge(1.25) <= decodeEdge) {
+            return
+        }
+        decodeEdge = requiredDecodeEdge(2)
+        for (var i = 0; i < imagePages.length; i++) {
+            if (imagePages[i] && imagePages[i].decodeEdge < decodeEdge) {
+                imagePages[i].decodeEdge = decodeEdge
+            }
+        }
+    }
+
+    // 图片按 decodeEdge 缩小解码后，若宽高比与显示区域相差悬殊，覆盖显示时余量可能不足 1.25 倍，
+    // 此时按需提高该页的解码上限重新解码；长边小于上限说明原图本身不大，已是原始分辨率
+    function ensureDecodeHeadroom(page, decodedWidth, decodedHeight) {
+        if (!page || decodedWidth <= 0 || decodedHeight <= 0) {
+            return
+        }
+        if (Math.max(decodedWidth, decodedHeight) < page.decodeEdge - 1) {
+            return
+        }
+        var dpr = Screen.devicePixelRatio
+        var headroom = Math.min(decodedWidth / (Math.max(viewWidth(), 1) * dpr),
+                                decodedHeight / (Math.max(viewHeight(), 1) * dpr))
+        if (headroom < 1.25) {
+            page.decodeEdge = Math.ceil(page.decodeEdge * 2 / headroom / 128) * 128
+        }
+    }
+
+    // 同步imageList和imagePages：清空旧页面，页面在切换到时才创建
+    function syncImagePages() {
+        var listLength = imageListLength()
         console.log("同步图片页面，imageList长度:", listLength, "imagePages长度:", imagePages.length)
 
         imageStackView.clear()
@@ -80,116 +140,104 @@ SWidget{
                 imagePages[i].destroy()
             }
         }
-        imagePages = []
-        
-        // 添加或更新页面
-        for (var i = 0; i < listLength; i++) {
-            //%QT6_BEGIN
-            var imageSource = imageList[i]
-            //%QT6_END
-            
-            //%QT5_BEGIN
-            // Qt5中安全地访问数组元素
-            var imageSource = ""
-            if (imageList && imageList[i]) {
-                imageSource = imageList[i]
-            }
-            //%QT5_END
-            
-            var newPage = imagePageComponent.createObject(imageStackView, {
-                imageSource: imageSource
-            })
-            imagePages.push(newPage)
-            console.log("创建新页面:", imageSource)
+        var pages = []
+        for (var j = 0; j < listLength; j++) {
+            pages.push(null)
         }
-        
-        console.log("同步完成，imagePages长度:", imagePages.length)
-        for (var i = 0; i < imagePages.length; i++) {
-            console.log("imagePages[", i, "]:", imagePages[i].imageSource)
-        }
+        imagePages = pages
 
         switchToImage(0)
     }
-    
+
+    function getOrCreatePage(index) {
+        if (index < 0 || index >= imagePages.length) {
+            return null
+        }
+        if (!imagePages[index]) {
+            updateDecodeEdge()
+            //%QT6_BEGIN
+            var imageSource = imageList[index]
+            //%QT6_END
+
+            //%QT5_BEGIN
+            // Qt5中安全地访问数组元素
+            var imageSource = ""
+            if (imageList && imageList[index]) {
+                imageSource = imageList[index]
+            }
+            //%QT5_END
+
+            imagePages[index] = imagePageComponent.createObject(imageStackView, {
+                imageSource: imageSource,
+                decodeEdge: decodeEdge
+            })
+        }
+        return imagePages[index]
+    }
+
+    function releaseDistantPages(keepIndex) {
+        var count = imagePages.length
+        for (var i = 0; i < count; i++) {
+            var page = imagePages[i]
+            if (!page || page === imageStackView.currentItem) {
+                continue
+            }
+            var distance = Math.abs(i - keepIndex)
+            distance = Math.min(distance, count - distance)
+            if (distance <= cacheRange) {
+                continue
+            }
+            // 仍在退出过渡中的页面暂不销毁，由下一次清理处理
+            if (page.StackView.status === StackView.Inactive) {
+                page.destroy()
+                imagePages[i] = null
+            }
+        }
+    }
+
     // 切换到下一张图片
     function nextImage() {
         if (multipleImage && hasImage) {
-            //%QT6_BEGIN
-            var listLength = imageList.length
-            //%QT6_END
-            
-            //%QT5_BEGIN
-            var listLength = 0
-            if (imageList && typeof imageList.length !== 'undefined') {
-                listLength = imageList.length
-            }
-            //%QT5_END
-            
-            var nextIndex = (currentImageIndex + 1) % listLength
-            switchToImage(nextIndex)
+            switchToImage((currentImageIndex + 1) % imageListLength())
         }
     }
-    
+
     // 切换到上一张图片
     function previousImage() {
         if (multipleImage && hasImage) {
-            //%QT6_BEGIN
-            var listLength = imageList.length
-            //%QT6_END
-            
-            //%QT5_BEGIN
-            var listLength = 0
-            if (imageList && typeof imageList.length !== 'undefined') {
-                listLength = imageList.length
-            }
-            //%QT5_END
-            
-            var prevIndex = currentImageIndex > 0 ? currentImageIndex - 1 : listLength - 1
-            switchToImage(prevIndex)
+            var listLength = imageListLength()
+            switchToImage(currentImageIndex > 0 ? currentImageIndex - 1 : listLength - 1)
         }
     }
-    
+
     // 图片切换函数 - 使用StackView.replace实现渐隐效果
     function switchToImage(newIndex) {
-        //%QT6_BEGIN
-        var listLength = imageList.length
-        //%QT6_END
-        
-        //%QT5_BEGIN
-        var listLength = 0
-        if (imageList && typeof imageList.length !== 'undefined') {
-            listLength = imageList.length
-        }
-        //%QT5_END
-        
+        var listLength = imageListLength()
+
         if (!listLength || newIndex < 0 || newIndex >= listLength) {
-            console.log("无效的图片索引:", newIndex)
-            console.log("当前图片索引:", currentImageIndex)
-            console.log("图片列表长度:", listLength)
-            console.log("hasImage:", hasImage)
+            console.log("无效的图片索引:", newIndex, "当前图片索引:", currentImageIndex, "图片列表长度:", listLength)
             return
         }
-        
-        if (newIndex === currentImageIndex && imageStackView.currentItem === imagePages[newIndex]) {
-            console.log("已经是当前图片，不需要切换")
+
+        if (newIndex === currentImageIndex && imageStackView.currentItem && imageStackView.currentItem === imagePages[newIndex]) {
             return  // 已经是当前图片，不需要切换
         }
-        
-        console.log("切换到图片索引:", newIndex, "从:", currentImageIndex)
-        
-        // 更新当前索引
-        currentImageIndex = newIndex
-        
-        // 确保页面存在
-        if (!imagePages[newIndex]) {
-            console.log("页面不存在，重新同步")
-            syncImagePages()
-        }
 
-        imageStackView.replace(null, imagePages[newIndex])
-        
+        console.log("切换到图片索引:", newIndex, "从:", currentImageIndex)
+        currentImageIndex = newIndex
+
+        var page = getOrCreatePage(newIndex)
+        if (!page) {
+            return
+        }
+        imageStackView.replace(null, page)
+
+        // 预先创建下一页，轮到它时已经解码完成
+        if (listLength > 1) {
+            getOrCreatePage((newIndex + 1) % listLength)
+        }
+        pageCleanupTimer.restart()
     }
-    
 
     // 监听imageList变化 - 同步页面并同步持久化资源路径列表
     //%QT6_BEGIN
@@ -271,24 +319,50 @@ SWidget{
             Item {
                 id: imagePage
                 property string imageSource: ""
+                // 本页解码边长上限，创建时取 root.decodeEdge，宽高比悬殊的图片加载后按需提高
+                property int decodeEdge: 256
+                // 与 Image 的 PreserveAspectCrop 一样，超出页面的部分不显示
+                clip: true
 
-                
                 // 图片显示（使用 file:// URL 确保 Windows 下本地路径能正确显示）
+                // 以默认的拉伸模式加载：这样 sourceSize 只会缩小大图、不会放大小图（Crop/Fit 模式下会放大）；
+                // 再按解码结果的宽高比覆盖整页并居中，显示效果与 PreserveAspectCrop 相同
                 Image {
                     id: pageImage
-                    anchors.fill: parent
+                    readonly property real coverScale: (implicitWidth > 0 && implicitHeight > 0)
+                        ? Math.max(imagePage.width / implicitWidth, imagePage.height / implicitHeight) : 0
+                    // 尺寸与位置取整：Image 开了 layer，落在亚像素位置会让离屏纹理多一次插值而变糊
+                    x: Math.round((imagePage.width - width) / 2)
+                    y: Math.round((imagePage.height - height) / 2)
+                    width: Math.ceil(implicitWidth * coverScale)
+                    height: Math.ceil(implicitHeight * coverScale)
                     source: imagePage.imageSource
-                    fillMode: Image.PreserveAspectCrop
+                    sourceSize.width: imagePage.decodeEdge
+                    sourceSize.height: imagePage.decodeEdge
                     asynchronous: true
+                    //%IF_QT6 retainWhileLoading: true
                     visible: true
                     cache: false
-                    
+
                     // 渲染优化
                     layer.enabled: true
                     layer.smooth: true
                     layer.mipmap: true
+
+                    onStatusChanged: {
+                        if (status === Image.Ready) {
+                            root.ensureDecodeHeadroom(imagePage, implicitWidth, implicitHeight)
+                        }
+                    }
                 }
             }
+        }
+        // 切换过渡结束后释放远离当前页的页面
+        Timer {
+            id: pageCleanupTimer
+            interval: 500
+            repeat: false
+            onTriggered: root.releaseDistantPages(root.currentImageIndex)
         }
         // 自动轮播定时器：仅当组件可见时运行（unitVisible 由 SWidget 绑定，未就绪时默认为 false，避免多页同时轮播）
         Timer {
@@ -461,6 +535,8 @@ SWidget{
                 anchors.fill: parent
                 anchors.margins: 2
                 clip: true
+                onWidthChanged: root.updateDecodeEdge()
+                onHeightChanged: root.updateDecodeEdge()
                 
                 // StackView管理图片页面
                 StackView {
